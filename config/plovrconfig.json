@@ -1,0 +1,22 @@
+//The plovr condfig file for the surfforecaster.com project.
+{
+    "id": "whipple",
+    "paths": [
+    "../whipple.eig/"],
+    "inputs": ["../whipple.eig/main.js"],
+    "level": "VERBOSE",
+   //  "mode": "RAW",
+//        "mode": "SIMPLE",
+  "mode": "RAW",
+    "externs":'../whipple.eig/externs.js',
+    "define": {
+    "goog.DEBUG": true
+    },
+    "checks": {
+        // acceptable values are "ERROR", "WARNING", and "OFF" 
+        "deprecated": "ERROR",
+        "checkTypes": "ERROR",
+        "nonStandardJsDocs": "ERROR",
+        "undefinedVars": "ERROR"
+    }
+}
