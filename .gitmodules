@@ -1,0 +1,3 @@
+[submodule "numericjs"]
+	path = numericjs
+	url = git://github.com/sloisel/numeric.git
