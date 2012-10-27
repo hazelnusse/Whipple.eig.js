@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Closure Unit Tests - Paramters Test</title>
+        <script src="../numericjs/src/numeric.js"></script> 
+        
+        <script src="./goog/base.js"></script>
+         <script   type="text/javascript" src="../whipple.eig/parameters.js" charset="utf-8"></script>
+        
+        <style>body{background-color: white;}</style>
+        <script>
+                goog.require('goog.dom');
+    goog.require('goog.dom.a11y');
+    goog.require('goog.dom.a11y.State');
+    goog.require('goog.events');
+    goog.require('goog.functions');
+    goog.require('goog.fx.Animation');
+    goog.require('goog.fx.Transition.EventType');
+    goog.require('goog.testing.PropertyReplacer');
+    goog.require('goog.testing.asserts');
+    goog.require('goog.testing.jsunit');
+    goog.require('goog.ui.AnimatedZippy');
+    goog.require('goog.ui.Zippy.Events');
+            goog.require('whipple.eig.Parameters')
+        </script>
+    </head>
+    <body>
+        <script>
+            var parameters;
+
+            function setUp() {
+                parameters = new whipple.eig.Parameters();
+            }
+
+            function tearDown() {
+                //                parameters.dispose();
+            }
+            
+            function testParameters() {
+             assertEquals(parameters.w,1.02);
+             assertEquals(parameters.pi,3.141592653589793);
+             assertEquals(parameters.IFyy,0.28);
+            }
+        </script>
+    </body>
+</html>
