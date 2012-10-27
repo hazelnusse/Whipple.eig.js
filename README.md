@@ -18,3 +18,8 @@ To build the closure java script:
 Dependencies:
 ==============
 +[Plovr](http://plovr.com/) : Only needed to build the project.
+
+Tests:
+=============================
++For the tests to work a directory in the tests directory 'goog' must exists that
+contains the [closure library](https://developers.google.com/closure/library/)

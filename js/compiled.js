@@ -1536,7 +1536,9 @@ goog.scope = function(fn) {
 };
 
 
-goog.addDependency("../whipple.eig/main.js", ["whipple.eig.start"], ["goog.dom"]);
+goog.addDependency("../whipple.eig/externs.js", [], []);
+goog.addDependency("../whipple.eig/main.js", ["whipple.eig.start"], ["goog.dom", "goog.debug.Logger", "goog.debug.FancyWindow"]);
+goog.addDependency("../whipple.eig/parameters.js", ["whipple.eig.Parameters"], []);
 goog.addDependency("/closure/goog/array/array.js", ["goog.array", "goog.array.ArrayLike"], ["goog.asserts"]);
 goog.addDependency("/closure/goog/asserts/asserts.js", ["goog.asserts", "goog.asserts.AssertionError"], ["goog.debug.Error", "goog.string"]);
 goog.addDependency("/closure/goog/async/conditionaldelay.js", ["goog.async.ConditionalDelay"], ["goog.Disposable", "goog.async.Delay"]);
@@ -2309,7 +2311,6 @@ goog.addDependency("/closure/goog/vec/vec3.js", ["goog.vec.Vec3"], ["goog.vec"])
 goog.addDependency("/closure/goog/vec/vec4.js", ["goog.vec.Vec4"], ["goog.vec"]);
 goog.addDependency("/closure/goog/webgl/webgl.js", ["goog.webgl"], []);
 goog.addDependency("/closure/goog/window/window.js", ["goog.window"], ["goog.string", "goog.userAgent"]);
-goog.addDependency("/externs.js", [], []);
 goog.addDependency("/soy/soyutils.js", [], []);
 goog.addDependency("/soy/soyutils_usegoog.js", ["soy", "soy.StringBuilder", "soy.esc", "soydata", "soydata.SanitizedHtml", "soydata.SanitizedHtmlAttribute", "soydata.SanitizedJsStrChars", "soydata.SanitizedUri"], ["goog.asserts", "goog.dom.DomHelper", "goog.format", "goog.i18n.BidiFormatter", "goog.i18n.bidi", "goog.soy", "goog.string", "goog.string.StringBuffer"]);
 goog.addDependency("/third_party/closure/goog/base.js", [], []);
@@ -9627,9 +9628,5164 @@ goog.dom.DomHelper.prototype.getAncestorByClass =
  *     no match.
  */
 goog.dom.DomHelper.prototype.getAncestor = goog.dom.getAncestor;
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Generics method for collection-like classes and objects.
+ *
+ * @author arv@google.com (Erik Arvidsson)
+ *
+ * This file contains functions to work with collections. It supports using
+ * Map, Set, Array and Object and other classes that implement collection-like
+ * methods.
+ */
+
+
+goog.provide('goog.structs');
+
+goog.require('goog.array');
+goog.require('goog.object');
+
+
+// We treat an object as a dictionary if it has getKeys or it is an object that
+// isn't arrayLike.
+
+
+/**
+ * Returns the number of values in the collection-like object.
+ * @param {Object} col The collection-like object.
+ * @return {number} The number of values in the collection-like object.
+ */
+goog.structs.getCount = function(col) {
+  if (typeof col.getCount == 'function') {
+    return col.getCount();
+  }
+  if (goog.isArrayLike(col) || goog.isString(col)) {
+    return col.length;
+  }
+  return goog.object.getCount(col);
+};
+
+
+/**
+ * Returns the values of the collection-like object.
+ * @param {Object} col The collection-like object.
+ * @return {!Array} The values in the collection-like object.
+ */
+goog.structs.getValues = function(col) {
+  if (typeof col.getValues == 'function') {
+    return col.getValues();
+  }
+  if (goog.isString(col)) {
+    return col.split('');
+  }
+  if (goog.isArrayLike(col)) {
+    var rv = [];
+    var l = col.length;
+    for (var i = 0; i < l; i++) {
+      rv.push(col[i]);
+    }
+    return rv;
+  }
+  return goog.object.getValues(col);
+};
+
+
+/**
+ * Returns the keys of the collection. Some collections have no notion of
+ * keys/indexes and this function will return undefined in those cases.
+ * @param {Object} col The collection-like object.
+ * @return {!Array|undefined} The keys in the collection.
+ */
+goog.structs.getKeys = function(col) {
+  if (typeof col.getKeys == 'function') {
+    return col.getKeys();
+  }
+  // if we have getValues but no getKeys we know this is a key-less collection
+  if (typeof col.getValues == 'function') {
+    return undefined;
+  }
+  if (goog.isArrayLike(col) || goog.isString(col)) {
+    var rv = [];
+    var l = col.length;
+    for (var i = 0; i < l; i++) {
+      rv.push(i);
+    }
+    return rv;
+  }
+
+  return goog.object.getKeys(col);
+};
+
+
+/**
+ * Whether the collection contains the given value. This is O(n) and uses
+ * equals (==) to test the existence.
+ * @param {Object} col The collection-like object.
+ * @param {*} val The value to check for.
+ * @return {boolean} True if the map contains the value.
+ */
+goog.structs.contains = function(col, val) {
+  if (typeof col.contains == 'function') {
+    return col.contains(val);
+  }
+  if (typeof col.containsValue == 'function') {
+    return col.containsValue(val);
+  }
+  if (goog.isArrayLike(col) || goog.isString(col)) {
+    return goog.array.contains(/** @type {Array} */ (col), val);
+  }
+  return goog.object.containsValue(col, val);
+};
+
+
+/**
+ * Whether the collection is empty.
+ * @param {Object} col The collection-like object.
+ * @return {boolean} True if empty.
+ */
+goog.structs.isEmpty = function(col) {
+  if (typeof col.isEmpty == 'function') {
+    return col.isEmpty();
+  }
+
+  // We do not use goog.string.isEmpty because here we treat the string as
+  // collection and as such even whitespace matters
+
+  if (goog.isArrayLike(col) || goog.isString(col)) {
+    return goog.array.isEmpty(/** @type {Array} */ (col));
+  }
+  return goog.object.isEmpty(col);
+};
+
+
+/**
+ * Removes all the elements from the collection.
+ * @param {Object} col The collection-like object.
+ */
+goog.structs.clear = function(col) {
+  // NOTE(arv): This should not contain strings because strings are immutable
+  if (typeof col.clear == 'function') {
+    col.clear();
+  } else if (goog.isArrayLike(col)) {
+    goog.array.clear((/** @type {goog.array.ArrayLike} */ col));
+  } else {
+    goog.object.clear(col);
+  }
+};
+
+
+/**
+ * Calls a function for each value in a collection. The function takes
+ * three arguments; the value, the key and the collection.
+ *
+ * @param {Object} col The collection-like object.
+ * @param {Function} f The function to call for every value. This function takes
+ *     3 arguments (the value, the key or undefined if the collection has no
+ *     notion of keys, and the collection) and the return value is irrelevant.
+ * @param {Object=} opt_obj The object to be used as the value of 'this'
+ *     within {@code f}.
+ */
+goog.structs.forEach = function(col, f, opt_obj) {
+  if (typeof col.forEach == 'function') {
+    col.forEach(f, opt_obj);
+  } else if (goog.isArrayLike(col) || goog.isString(col)) {
+    goog.array.forEach(/** @type {Array} */ (col), f, opt_obj);
+  } else {
+    var keys = goog.structs.getKeys(col);
+    var values = goog.structs.getValues(col);
+    var l = values.length;
+    for (var i = 0; i < l; i++) {
+      f.call(opt_obj, values[i], keys && keys[i], col);
+    }
+  }
+};
+
+
+/**
+ * Calls a function for every value in the collection. When a call returns true,
+ * adds the value to a new collection (Array is returned by default).
+ *
+ * @param {Object} col The collection-like object.
+ * @param {Function} f The function to call for every value. This function takes
+ *     3 arguments (the value, the key or undefined if the collection has no
+ *     notion of keys, and the collection) and should return a Boolean. If the
+ *     return value is true the value is added to the result collection. If it
+ *     is false the value is not included.
+ * @param {Object=} opt_obj The object to be used as the value of 'this'
+ *     within {@code f}.
+ * @return {!Object|!Array} A new collection where the passed values are
+ *     present. If col is a key-less collection an array is returned.  If col
+ *     has keys and values a plain old JS object is returned.
+ */
+goog.structs.filter = function(col, f, opt_obj) {
+  if (typeof col.filter == 'function') {
+    return col.filter(f, opt_obj);
+  }
+  if (goog.isArrayLike(col) || goog.isString(col)) {
+    return goog.array.filter(/** @type {!Array} */ (col), f, opt_obj);
+  }
+
+  var rv;
+  var keys = goog.structs.getKeys(col);
+  var values = goog.structs.getValues(col);
+  var l = values.length;
+  if (keys) {
+    rv = {};
+    for (var i = 0; i < l; i++) {
+      if (f.call(opt_obj, values[i], keys[i], col)) {
+        rv[keys[i]] = values[i];
+      }
+    }
+  } else {
+    // We should not use goog.array.filter here since we want to make sure that
+    // the index is undefined as well as make sure that col is passed to the
+    // function.
+    rv = [];
+    for (var i = 0; i < l; i++) {
+      if (f.call(opt_obj, values[i], undefined, col)) {
+        rv.push(values[i]);
+      }
+    }
+  }
+  return rv;
+};
+
+
+/**
+ * Calls a function for every value in the collection and adds the result into a
+ * new collection (defaults to creating a new Array).
+ *
+ * @param {Object} col The collection-like object.
+ * @param {Function} f The function to call for every value. This function
+ *     takes 3 arguments (the value, the key or undefined if the collection has
+ *     no notion of keys, and the collection) and should return something. The
+ *     result will be used as the value in the new collection.
+ * @param {Object=} opt_obj  The object to be used as the value of 'this'
+ *     within {@code f}.
+ * @return {!Object|!Array} A new collection with the new values.  If col is a
+ *     key-less collection an array is returned.  If col has keys and values a
+ *     plain old JS object is returned.
+ */
+goog.structs.map = function(col, f, opt_obj) {
+  if (typeof col.map == 'function') {
+    return col.map(f, opt_obj);
+  }
+  if (goog.isArrayLike(col) || goog.isString(col)) {
+    return goog.array.map(/** @type {!Array} */ (col), f, opt_obj);
+  }
+
+  var rv;
+  var keys = goog.structs.getKeys(col);
+  var values = goog.structs.getValues(col);
+  var l = values.length;
+  if (keys) {
+    rv = {};
+    for (var i = 0; i < l; i++) {
+      rv[keys[i]] = f.call(opt_obj, values[i], keys[i], col);
+    }
+  } else {
+    // We should not use goog.array.map here since we want to make sure that
+    // the index is undefined as well as make sure that col is passed to the
+    // function.
+    rv = [];
+    for (var i = 0; i < l; i++) {
+      rv[i] = f.call(opt_obj, values[i], undefined, col);
+    }
+  }
+  return rv;
+};
+
+
+/**
+ * Calls f for each value in a collection. If any call returns true this returns
+ * true (without checking the rest). If all returns false this returns false.
+ *
+ * @param {Object|Array|string} col The collection-like object.
+ * @param {Function} f The function to call for every value. This function takes
+ *     3 arguments (the value, the key or undefined if the collection has no
+ *     notion of keys, and the collection) and should return a Boolean.
+ * @param {Object=} opt_obj  The object to be used as the value of 'this'
+ *     within {@code f}.
+ * @return {boolean} True if any value passes the test.
+ */
+goog.structs.some = function(col, f, opt_obj) {
+  if (typeof col.some == 'function') {
+    return col.some(f, opt_obj);
+  }
+  if (goog.isArrayLike(col) || goog.isString(col)) {
+    return goog.array.some(/** @type {!Array} */ (col), f, opt_obj);
+  }
+  var keys = goog.structs.getKeys(col);
+  var values = goog.structs.getValues(col);
+  var l = values.length;
+  for (var i = 0; i < l; i++) {
+    if (f.call(opt_obj, values[i], keys && keys[i], col)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+
+/**
+ * Calls f for each value in a collection. If all calls return true this return
+ * true this returns true. If any returns false this returns false at this point
+ *  and does not continue to check the remaining values.
+ *
+ * @param {Object} col The collection-like object.
+ * @param {Function} f The function to call for every value. This function takes
+ *     3 arguments (the value, the key or undefined if the collection has no
+ *     notion of keys, and the collection) and should return a Boolean.
+ * @param {Object=} opt_obj  The object to be used as the value of 'this'
+ *     within {@code f}.
+ * @return {boolean} True if all key-value pairs pass the test.
+ */
+goog.structs.every = function(col, f, opt_obj) {
+  if (typeof col.every == 'function') {
+    return col.every(f, opt_obj);
+  }
+  if (goog.isArrayLike(col) || goog.isString(col)) {
+    return goog.array.every(/** @type {!Array} */ (col), f, opt_obj);
+  }
+  var keys = goog.structs.getKeys(col);
+  var values = goog.structs.getValues(col);
+  var l = values.length;
+  for (var i = 0; i < l; i++) {
+    if (!f.call(opt_obj, values[i], keys && keys[i], col)) {
+      return false;
+    }
+  }
+  return true;
+};
+// Copyright 2011 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Defines the collection interface.
+ *
+ * @author nnaze@google.com (Nathan Naze)
+ */
+
+goog.provide('goog.structs.Collection');
+
+
+
+/**
+ * An interface for a collection of values.
+ * @interface
+ */
+goog.structs.Collection = function() {};
+
+
+/**
+ * @param {*} value Value to add to the collection.
+ */
+goog.structs.Collection.prototype.add;
+
+
+/**
+ * @param {*} value Value to remove from the collection.
+ */
+goog.structs.Collection.prototype.remove;
+
+
+/**
+ * @param {*} value Value to find in the tree.
+ * @return {boolean} Whether the collection contains the specified value.
+ */
+goog.structs.Collection.prototype.contains;
+
+
+/**
+ * @return {number} The number of values stored in the collection.
+ */
+goog.structs.Collection.prototype.getCount;
+
+// Copyright 2007 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Python style iteration utilities.
+ * @author arv@google.com (Erik Arvidsson)
+ */
+
+
+goog.provide('goog.iter');
+goog.provide('goog.iter.Iterator');
+goog.provide('goog.iter.StopIteration');
+
+goog.require('goog.array');
+goog.require('goog.asserts');
+
+
+// TODO(nnaze): Add more functions from Python's itertools.
+// http://docs.python.org/library/itertools.html
+
+
+/**
+ * @typedef {goog.iter.Iterator|{length:number}|{__iterator__}}
+ */
+goog.iter.Iterable;
+
+
+// For script engines that already support iterators.
+if ('StopIteration' in goog.global) {
+  /**
+   * Singleton Error object that is used to terminate iterations.
+   * @type {Error}
+   */
+  goog.iter.StopIteration = goog.global['StopIteration'];
+} else {
+  /**
+   * Singleton Error object that is used to terminate iterations.
+   * @type {Error}
+   * @suppress {duplicate}
+   */
+  goog.iter.StopIteration = Error('StopIteration');
+}
+
+
+
+/**
+ * Class/interface for iterators.  An iterator needs to implement a {@code next}
+ * method and it needs to throw a {@code goog.iter.StopIteration} when the
+ * iteration passes beyond the end.  Iterators have no {@code hasNext} method.
+ * It is recommended to always use the helper functions to iterate over the
+ * iterator or in case you are only targeting JavaScript 1.7 for in loops.
+ * @constructor
+ */
+goog.iter.Iterator = function() {};
+
+
+/**
+ * Returns the next value of the iteration.  This will throw the object
+ * {@see goog.iter#StopIteration} when the iteration passes the end.
+ * @return {*} Any object or value.
+ */
+goog.iter.Iterator.prototype.next = function() {
+  throw goog.iter.StopIteration;
+};
+
+
+/**
+ * Returns the {@code Iterator} object itself.  This is used to implement
+ * the iterator protocol in JavaScript 1.7
+ * @param {boolean=} opt_keys  Whether to return the keys or values. Default is
+ *     to only return the values.  This is being used by the for-in loop (true)
+ *     and the for-each-in loop (false).  Even though the param gives a hint
+ *     about what the iterator will return there is no guarantee that it will
+ *     return the keys when true is passed.
+ * @return {!goog.iter.Iterator} The object itself.
+ */
+goog.iter.Iterator.prototype.__iterator__ = function(opt_keys) {
+  return this;
+};
+
+
+/**
+ * Returns an iterator that knows how to iterate over the values in the object.
+ * @param {goog.iter.Iterable} iterable  If the object is an iterator it
+ *     will be returned as is.  If the object has a {@code __iterator__} method
+ *     that will be called to get the value iterator.  If the object is an
+ *     array-like object we create an iterator for that.
+ * @return {!goog.iter.Iterator} An iterator that knows how to iterate over the
+ *     values in {@code iterable}.
+ */
+goog.iter.toIterator = function(iterable) {
+  if (iterable instanceof goog.iter.Iterator) {
+    return iterable;
+  }
+  if (typeof iterable.__iterator__ == 'function') {
+    return iterable.__iterator__(false);
+  }
+  if (goog.isArrayLike(iterable)) {
+    var i = 0;
+    var newIter = new goog.iter.Iterator;
+    newIter.next = function() {
+      while (true) {
+        if (i >= iterable.length) {
+          throw goog.iter.StopIteration;
+        }
+        // Don't include deleted elements.
+        if (!(i in iterable)) {
+          i++;
+          continue;
+        }
+        return iterable[i++];
+      }
+    };
+    return newIter;
+  }
+
+
+  // TODO(arv): Should we fall back on goog.structs.getValues()?
+  throw Error('Not implemented');
+};
+
+
+/**
+ * Calls a function for each element in the iterator with the element of the
+ * iterator passed as argument.
+ *
+ * @param {goog.iter.Iterable} iterable  The iterator to iterate
+ *     over.  If the iterable is an object {@code toIterator} will be called on
+ *     it.
+ * @param {Function} f  The function to call for every element.  This function
+ *     takes 3 arguments (the element, undefined, and the iterator) and the
+ *     return value is irrelevant.  The reason for passing undefined as the
+ *     second argument is so that the same function can be used in
+ *     {@see goog.array#forEach} as well as others.
+ * @param {Object=} opt_obj  The object to be used as the value of 'this' within
+ *     {@code f}.
+ */
+goog.iter.forEach = function(iterable, f, opt_obj) {
+  if (goog.isArrayLike(iterable)) {
+    /** @preserveTry */
+    try {
+      goog.array.forEach((/** @type {goog.array.ArrayLike} */ iterable), f,
+                         opt_obj);
+    } catch (ex) {
+      if (ex !== goog.iter.StopIteration) {
+        throw ex;
+      }
+    }
+  } else {
+    iterable = goog.iter.toIterator(iterable);
+    /** @preserveTry */
+    try {
+      while (true) {
+        f.call(opt_obj, iterable.next(), undefined, iterable);
+      }
+    } catch (ex) {
+      if (ex !== goog.iter.StopIteration) {
+        throw ex;
+      }
+    }
+  }
+};
+
+
+/**
+ * Calls a function for every element in the iterator, and if the function
+ * returns true adds the element to a new iterator.
+ *
+ * @param {goog.iter.Iterable} iterable The iterator to iterate over.
+ * @param {Function} f The function to call for every element.  This function
+ *     takes 3 arguments (the element, undefined, and the iterator) and should
+ *     return a boolean.  If the return value is true the element will be
+ *     included  in the returned iteror.  If it is false the element is not
+ *     included.
+ * @param {Object=} opt_obj The object to be used as the value of 'this' within
+ *     {@code f}.
+ * @return {!goog.iter.Iterator} A new iterator in which only elements that
+ *     passed the test are present.
+ */
+goog.iter.filter = function(iterable, f, opt_obj) {
+  iterable = goog.iter.toIterator(iterable);
+  var newIter = new goog.iter.Iterator;
+  newIter.next = function() {
+    while (true) {
+      var val = iterable.next();
+      if (f.call(opt_obj, val, undefined, iterable)) {
+        return val;
+      }
+    }
+  };
+  return newIter;
+};
+
+
+/**
+ * Creates a new iterator that returns the values in a range.  This function
+ * can take 1, 2 or 3 arguments:
+ * <pre>
+ * range(5) same as range(0, 5, 1)
+ * range(2, 5) same as range(2, 5, 1)
+ * </pre>
+ *
+ * @param {number} startOrStop  The stop value if only one argument is provided.
+ *     The start value if 2 or more arguments are provided.  If only one
+ *     argument is used the start value is 0.
+ * @param {number=} opt_stop  The stop value.  If left out then the first
+ *     argument is used as the stop value.
+ * @param {number=} opt_step  The number to increment with between each call to
+ *     next.  This can be negative.
+ * @return {!goog.iter.Iterator} A new iterator that returns the values in the
+ *     range.
+ */
+goog.iter.range = function(startOrStop, opt_stop, opt_step) {
+  var start = 0;
+  var stop = startOrStop;
+  var step = opt_step || 1;
+  if (arguments.length > 1) {
+    start = startOrStop;
+    stop = opt_stop;
+  }
+  if (step == 0) {
+    throw Error('Range step argument must not be zero');
+  }
+
+  var newIter = new goog.iter.Iterator;
+  newIter.next = function() {
+    if (step > 0 && start >= stop || step < 0 && start <= stop) {
+      throw goog.iter.StopIteration;
+    }
+    var rv = start;
+    start += step;
+    return rv;
+  };
+  return newIter;
+};
+
+
+/**
+ * Joins the values in a iterator with a delimiter.
+ * @param {goog.iter.Iterable} iterable  The iterator to get the values from.
+ * @param {string} deliminator  The text to put between the values.
+ * @return {string} The joined value string.
+ */
+goog.iter.join = function(iterable, deliminator) {
+  return goog.iter.toArray(iterable).join(deliminator);
+};
+
+
+/**
+ * For every element in the iterator call a function and return a new iterator
+ * with that value.
+ *
+ * @param {goog.iter.Iterable} iterable The iterator to iterate over.
+ * @param {Function} f The function to call for every element.  This function
+ *     takes 3 arguments (the element, undefined, and the iterator) and should
+ *     return a new value.
+ * @param {Object=} opt_obj The object to be used as the value of 'this' within
+ *     {@code f}.
+ * @return {!goog.iter.Iterator} A new iterator that returns the results of
+ *     applying the function to each element in the original iterator.
+ */
+goog.iter.map = function(iterable, f, opt_obj) {
+  iterable = goog.iter.toIterator(iterable);
+  var newIter = new goog.iter.Iterator;
+  newIter.next = function() {
+    while (true) {
+      var val = iterable.next();
+      return f.call(opt_obj, val, undefined, iterable);
+    }
+  };
+  return newIter;
+};
+
+
+/**
+ * Passes every element of an iterator into a function and accumulates the
+ * result.
+ *
+ * @param {goog.iter.Iterable} iterable The iterator to iterate over.
+ * @param {Function} f The function to call for every element. This function
+ *     takes 2 arguments (the function's previous result or the initial value,
+ *     and the value of the current element).
+ *     function(previousValue, currentElement) : newValue.
+ * @param {*} val The initial value to pass into the function on the first call.
+ * @param {Object=} opt_obj  The object to be used as the value of 'this'
+ *     within f.
+ * @return {*} Result of evaluating f repeatedly across the values of
+ *     the iterator.
+ */
+goog.iter.reduce = function(iterable, f, val, opt_obj) {
+  var rval = val;
+  goog.iter.forEach(iterable, function(val) {
+    rval = f.call(opt_obj, rval, val);
+  });
+  return rval;
+};
+
+
+/**
+ * Goes through the values in the iterator. Calls f for each these and if any of
+ * them returns true, this returns true (without checking the rest). If all
+ * return false this will return false.
+ *
+ * @param {goog.iter.Iterable} iterable  The iterator object.
+ * @param {Function} f  The function to call for every value. This function
+ *     takes 3 arguments (the value, undefined, and the iterator) and should
+ *     return a boolean.
+ * @param {Object=} opt_obj The object to be used as the value of 'this' within
+ *     {@code f}.
+ * @return {boolean} true if any value passes the test.
+ */
+goog.iter.some = function(iterable, f, opt_obj) {
+  iterable = goog.iter.toIterator(iterable);
+  /** @preserveTry */
+  try {
+    while (true) {
+      if (f.call(opt_obj, iterable.next(), undefined, iterable)) {
+        return true;
+      }
+    }
+  } catch (ex) {
+    if (ex !== goog.iter.StopIteration) {
+      throw ex;
+    }
+  }
+  return false;
+};
+
+
+/**
+ * Goes through the values in the iterator. Calls f for each these and if any of
+ * them returns false this returns false (without checking the rest). If all
+ * return true this will return true.
+ *
+ * @param {goog.iter.Iterable} iterable  The iterator object.
+ * @param {Function} f  The function to call for every value. This function
+ *     takes 3 arguments (the value, undefined, and the iterator) and should
+ *     return a boolean.
+ * @param {Object=} opt_obj The object to be used as the value of 'this' within
+ *     {@code f}.
+ * @return {boolean} true if every value passes the test.
+ */
+goog.iter.every = function(iterable, f, opt_obj) {
+  iterable = goog.iter.toIterator(iterable);
+  /** @preserveTry */
+  try {
+    while (true) {
+      if (!f.call(opt_obj, iterable.next(), undefined, iterable)) {
+        return false;
+      }
+    }
+  } catch (ex) {
+    if (ex !== goog.iter.StopIteration) {
+      throw ex;
+    }
+  }
+  return true;
+};
+
+
+/**
+ * Takes zero or more iterators and returns one iterator that will iterate over
+ * them in the order chained.
+ * @param {...goog.iter.Iterator} var_args  Any number of iterator objects.
+ * @return {!goog.iter.Iterator} Returns a new iterator that will iterate over
+ *     all the given iterators' contents.
+ */
+goog.iter.chain = function(var_args) {
+  var args = arguments;
+  var length = args.length;
+  var i = 0;
+  var newIter = new goog.iter.Iterator;
+
+  /**
+   * @return {*} The next item in the iteration.
+   * @this {goog.iter.Iterator}
+   */
+  newIter.next = function() {
+    /** @preserveTry */
+    try {
+      if (i >= length) {
+        throw goog.iter.StopIteration;
+      }
+      var current = goog.iter.toIterator(args[i]);
+      return current.next();
+    } catch (ex) {
+      if (ex !== goog.iter.StopIteration || i >= length) {
+        throw ex;
+      } else {
+        // In case we got a StopIteration increment counter and try again.
+        i++;
+        return this.next();
+      }
+    }
+  };
+
+  return newIter;
+};
+
+
+/**
+ * Builds a new iterator that iterates over the original, but skips elements as
+ * long as a supplied function returns true.
+ * @param {goog.iter.Iterable} iterable  The iterator object.
+ * @param {Function} f  The function to call for every value. This function
+ *     takes 3 arguments (the value, undefined, and the iterator) and should
+ *     return a boolean.
+ * @param {Object=} opt_obj The object to be used as the value of 'this' within
+ *     {@code f}.
+ * @return {!goog.iter.Iterator} A new iterator that drops elements from the
+ *     original iterator as long as {@code f} is true.
+ */
+goog.iter.dropWhile = function(iterable, f, opt_obj) {
+  iterable = goog.iter.toIterator(iterable);
+  var newIter = new goog.iter.Iterator;
+  var dropping = true;
+  newIter.next = function() {
+    while (true) {
+      var val = iterable.next();
+      if (dropping && f.call(opt_obj, val, undefined, iterable)) {
+        continue;
+      } else {
+        dropping = false;
+      }
+      return val;
+    }
+  };
+  return newIter;
+};
+
+
+/**
+ * Builds a new iterator that iterates over the original, but only as long as a
+ * supplied function returns true.
+ * @param {goog.iter.Iterable} iterable  The iterator object.
+ * @param {Function} f  The function to call for every value. This function
+ *     takes 3 arguments (the value, undefined, and the iterator) and should
+ *     return a boolean.
+ * @param {Object=} opt_obj This is used as the 'this' object in f when called.
+ * @return {!goog.iter.Iterator} A new iterator that keeps elements in the
+ *     original iterator as long as the function is true.
+ */
+goog.iter.takeWhile = function(iterable, f, opt_obj) {
+  iterable = goog.iter.toIterator(iterable);
+  var newIter = new goog.iter.Iterator;
+  var taking = true;
+  newIter.next = function() {
+    while (true) {
+      if (taking) {
+        var val = iterable.next();
+        if (f.call(opt_obj, val, undefined, iterable)) {
+          return val;
+        } else {
+          taking = false;
+        }
+      } else {
+        throw goog.iter.StopIteration;
+      }
+    }
+  };
+  return newIter;
+};
+
+
+/**
+ * Converts the iterator to an array
+ * @param {goog.iter.Iterable} iterable  The iterator to convert to an array.
+ * @return {!Array} An array of the elements the iterator iterates over.
+ */
+goog.iter.toArray = function(iterable) {
+  // Fast path for array-like.
+  if (goog.isArrayLike(iterable)) {
+    return goog.array.toArray((/** @type {!goog.array.ArrayLike} */ iterable));
+  }
+  iterable = goog.iter.toIterator(iterable);
+  var array = [];
+  goog.iter.forEach(iterable, function(val) {
+    array.push(val);
+  });
+  return array;
+};
+
+
+/**
+ * Iterates over 2 iterators and returns true if they contain the same sequence
+ * of elements and have the same length.
+ * @param {goog.iter.Iterable} iterable1  The first iterable object.
+ * @param {goog.iter.Iterable} iterable2  The second iterable object.
+ * @return {boolean} true if the iterators contain the same sequence of
+ *     elements and have the same length.
+ */
+goog.iter.equals = function(iterable1, iterable2) {
+  iterable1 = goog.iter.toIterator(iterable1);
+  iterable2 = goog.iter.toIterator(iterable2);
+  var b1, b2;
+  /** @preserveTry */
+  try {
+    while (true) {
+      b1 = b2 = false;
+      var val1 = iterable1.next();
+      b1 = true;
+      var val2 = iterable2.next();
+      b2 = true;
+      if (val1 != val2) {
+        return false;
+      }
+    }
+  } catch (ex) {
+    if (ex !== goog.iter.StopIteration) {
+      throw ex;
+    } else {
+      if (b1 && !b2) {
+        // iterable1 done but iterable2 is not done.
+        return false;
+      }
+      if (!b2) {
+        /** @preserveTry */
+        try {
+          // iterable2 not done?
+          val2 = iterable2.next();
+          // iterable2 not done but iterable1 is done
+          return false;
+        } catch (ex1) {
+          if (ex1 !== goog.iter.StopIteration) {
+            throw ex1;
+          }
+          // iterable2 done as well... They are equal
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+};
+
+
+/**
+ * Advances the iterator to the next position, returning the given default value
+ * instead of throwing an exception if the iterator has no more entries.
+ * @param {goog.iter.Iterable} iterable The iterable object.
+ * @param {*} defaultValue The value to return if the iterator is empty.
+ * @return {*} The next item in the iteration, or defaultValue if the iterator
+ *     was empty.
+ */
+goog.iter.nextOrValue = function(iterable, defaultValue) {
+  try {
+    return goog.iter.toIterator(iterable).next();
+  } catch (e) {
+    if (e != goog.iter.StopIteration) {
+      throw e;
+    }
+    return defaultValue;
+  }
+};
+
+
+/**
+ * Cartesian product of zero or more sets.  Gives an iterator that gives every
+ * combination of one element chosen from each set.  For example,
+ * ([1, 2], [3, 4]) gives ([1, 3], [1, 4], [2, 3], [2, 4]).
+ * @see http://docs.python.org/library/itertools.html#itertools.product
+ * @param {...!goog.array.ArrayLike.<*>} var_args Zero or more sets, as arrays.
+ * @return {!goog.iter.Iterator} An iterator that gives each n-tuple (as an
+ *     array).
+ */
+goog.iter.product = function(var_args) {
+  var someArrayEmpty = goog.array.some(arguments, function(arr) {
+    return !arr.length;
+  });
+
+  // An empty set in a cartesian product gives an empty set.
+  if (someArrayEmpty || !arguments.length) {
+    return new goog.iter.Iterator();
+  }
+
+  var iter = new goog.iter.Iterator();
+  var arrays = arguments;
+
+  // The first indicies are [0, 0, ...]
+  var indicies = goog.array.repeat(0, arrays.length);
+
+  iter.next = function() {
+
+    if (indicies) {
+      var retVal = goog.array.map(indicies, function(valueIndex, arrayIndex) {
+        return arrays[arrayIndex][valueIndex];
+      });
+
+      // Generate the next-largest indicies for the next call.
+      // Increase the rightmost index. If it goes over, increase the next
+      // rightmost (like carry-over addition).
+      for (var i = indicies.length - 1; i >= 0; i--) {
+        // Assertion prevents compiler warning below.
+        goog.asserts.assert(indicies);
+        if (indicies[i] < arrays[i].length - 1) {
+          indicies[i]++;
+          break;
+        }
+
+        // We're at the last indicies (the last element of every array), so
+        // the iteration is over on the next call.
+        if (i == 0) {
+          indicies = null;
+          break;
+        }
+        // Reset the index in this column and loop back to increment the
+        // next one.
+        indicies[i] = 0;
+      }
+      return retVal;
+    }
+
+    throw goog.iter.StopIteration;
+  };
+
+  return iter;
+};
+
+
+/**
+ * Create an iterator to cycle over the iterable's elements indefinitely.
+ * For example, ([1, 2, 3]) would return : 1, 2, 3, 1, 2, 3, ...
+ * @see: http://docs.python.org/library/itertools.html#itertools.cycle.
+ * @param {!goog.iter.Iterable} iterable The iterable object.
+ * @return {!goog.iter.Iterator} An iterator that iterates indefinitely over
+ * the values in {@code iterable}.
+ */
+goog.iter.cycle = function(iterable) {
+
+  var baseIterator = goog.iter.toIterator(iterable);
+
+  // We maintain a cache to store the iterable elements as we iterate
+  // over them. The cache is used to return elements once we have
+  // iterated over the iterable once.
+  var cache = [];
+  var cacheIndex = 0;
+
+  var iter = new goog.iter.Iterator();
+
+  // This flag is set after the iterable is iterated over once
+  var useCache = false;
+
+  iter.next = function() {
+    var returnElement = null;
+
+    // Pull elements off the original iterator if not using cache
+    if (!useCache) {
+
+      try {
+        // Return the element from the iterable
+        returnElement = baseIterator.next();
+        cache.push(returnElement);
+        return returnElement;
+      } catch (e) {
+        // If an exception other than StopIteration is thrown
+        // or if there are no elements to iterate over (the iterable was empty)
+        // throw an exception
+        if (e != goog.iter.StopIteration || goog.array.isEmpty(cache)) {
+          throw e;
+        }
+        // set useCache to true after we know that a 'StopIteration' exception
+        // was thrown and the cache is not empty (to handle the 'empty iterable'
+        // use case)
+        useCache = true;
+      }
+    }
+
+    returnElement = cache[cacheIndex];
+    cacheIndex = (cacheIndex + 1) % cache.length;
+
+    return returnElement;
+  };
+
+  return iter;
+};
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Datastructure: Hash Map.
+ *
+ * @author arv@google.com (Erik Arvidsson)
+ * @author jonp@google.com (Jon Perlow) Optimized for IE6
+ *
+ * This file contains an implementation of a Map structure. It implements a lot
+ * of the methods used in goog.structs so those functions work on hashes.  For
+ * convenience with common usage the methods accept any type for the key, though
+ * internally they will be cast to strings.
+ */
+
+
+goog.provide('goog.structs.Map');
+
+goog.require('goog.iter.Iterator');
+goog.require('goog.iter.StopIteration');
+goog.require('goog.object');
+goog.require('goog.structs');
+
+
+
+/**
+ * Class for Hash Map datastructure.
+ * @param {*=} opt_map Map or Object to initialize the map with.
+ * @param {...*} var_args If 2 or more arguments are present then they
+ *     will be used as key-value pairs.
+ * @constructor
+ */
+goog.structs.Map = function(opt_map, var_args) {
+
+  /**
+   * Underlying JS object used to implement the map.
+   * @type {!Object}
+   * @private
+   */
+  this.map_ = {};
+
+  /**
+   * An array of keys. This is necessary for two reasons:
+   *   1. Iterating the keys using for (var key in this.map_) allocates an
+   *      object for every key in IE which is really bad for IE6 GC perf.
+   *   2. Without a side data structure, we would need to escape all the keys
+   *      as that would be the only way we could tell during iteration if the
+   *      key was an internal key or a property of the object.
+   *
+   * This array can contain deleted keys so it's necessary to check the map
+   * as well to see if the key is still in the map (this doesn't require a
+   * memory allocation in IE).
+   * @type {!Array.<string>}
+   * @private
+   */
+  this.keys_ = [];
+
+  var argLength = arguments.length;
+
+  if (argLength > 1) {
+    if (argLength % 2) {
+      throw Error('Uneven number of arguments');
+    }
+    for (var i = 0; i < argLength; i += 2) {
+      this.set(arguments[i], arguments[i + 1]);
+    }
+  } else if (opt_map) {
+    this.addAll(/** @type {Object} */ (opt_map));
+  }
+};
+
+
+/**
+ * The number of key value pairs in the map.
+ * @private
+ * @type {number}
+ */
+goog.structs.Map.prototype.count_ = 0;
+
+
+/**
+ * Version used to detect changes while iterating.
+ * @private
+ * @type {number}
+ */
+goog.structs.Map.prototype.version_ = 0;
+
+
+/**
+ * @return {number} The number of key-value pairs in the map.
+ */
+goog.structs.Map.prototype.getCount = function() {
+  return this.count_;
+};
+
+
+/**
+ * Returns the values of the map.
+ * @return {!Array} The values in the map.
+ */
+goog.structs.Map.prototype.getValues = function() {
+  this.cleanupKeysArray_();
+
+  var rv = [];
+  for (var i = 0; i < this.keys_.length; i++) {
+    var key = this.keys_[i];
+    rv.push(this.map_[key]);
+  }
+  return rv;
+};
+
+
+/**
+ * Returns the keys of the map.
+ * @return {!Array.<string>} Array of string values.
+ */
+goog.structs.Map.prototype.getKeys = function() {
+  this.cleanupKeysArray_();
+  return /** @type {!Array.<string>} */ (this.keys_.concat());
+};
+
+
+/**
+ * Whether the map contains the given key.
+ * @param {*} key The key to check for.
+ * @return {boolean} Whether the map contains the key.
+ */
+goog.structs.Map.prototype.containsKey = function(key) {
+  return goog.structs.Map.hasKey_(this.map_, key);
+};
+
+
+/**
+ * Whether the map contains the given value. This is O(n).
+ * @param {*} val The value to check for.
+ * @return {boolean} Whether the map contains the value.
+ */
+goog.structs.Map.prototype.containsValue = function(val) {
+  for (var i = 0; i < this.keys_.length; i++) {
+    var key = this.keys_[i];
+    if (goog.structs.Map.hasKey_(this.map_, key) && this.map_[key] == val) {
+      return true;
+    }
+  }
+  return false;
+};
+
+
+/**
+ * Whether this map is equal to the argument map.
+ * @param {goog.structs.Map} otherMap The map against which to test equality.
+ * @param {function(*, *) : boolean=} opt_equalityFn Optional equality function
+ *     to test equality of values. If not specified, this will test whether
+ *     the values contained in each map are identical objects.
+ * @return {boolean} Whether the maps are equal.
+ */
+goog.structs.Map.prototype.equals = function(otherMap, opt_equalityFn) {
+  if (this === otherMap) {
+    return true;
+  }
+
+  if (this.count_ != otherMap.getCount()) {
+    return false;
+  }
+
+  var equalityFn = opt_equalityFn || goog.structs.Map.defaultEquals;
+
+  this.cleanupKeysArray_();
+  for (var key, i = 0; key = this.keys_[i]; i++) {
+    if (!equalityFn(this.get(key), otherMap.get(key))) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+
+/**
+ * Default equality test for values.
+ * @param {*} a The first value.
+ * @param {*} b The second value.
+ * @return {boolean} Whether a and b reference the same object.
+ */
+goog.structs.Map.defaultEquals = function(a, b) {
+  return a === b;
+};
+
+
+/**
+ * @return {boolean} Whether the map is empty.
+ */
+goog.structs.Map.prototype.isEmpty = function() {
+  return this.count_ == 0;
+};
+
+
+/**
+ * Removes all key-value pairs from the map.
+ */
+goog.structs.Map.prototype.clear = function() {
+  this.map_ = {};
+  this.keys_.length = 0;
+  this.count_ = 0;
+  this.version_ = 0;
+};
+
+
+/**
+ * Removes a key-value pair based on the key. This is O(logN) amortized due to
+ * updating the keys array whenever the count becomes half the size of the keys
+ * in the keys array.
+ * @param {*} key  The key to remove.
+ * @return {boolean} Whether object was removed.
+ */
+goog.structs.Map.prototype.remove = function(key) {
+  if (goog.structs.Map.hasKey_(this.map_, key)) {
+    delete this.map_[key];
+    this.count_--;
+    this.version_++;
+
+    // clean up the keys array if the threshhold is hit
+    if (this.keys_.length > 2 * this.count_) {
+      this.cleanupKeysArray_();
+    }
+
+    return true;
+  }
+  return false;
+};
+
+
+/**
+ * Cleans up the temp keys array by removing entries that are no longer in the
+ * map.
+ * @private
+ */
+goog.structs.Map.prototype.cleanupKeysArray_ = function() {
+  if (this.count_ != this.keys_.length) {
+    // First remove keys that are no longer in the map.
+    var srcIndex = 0;
+    var destIndex = 0;
+    while (srcIndex < this.keys_.length) {
+      var key = this.keys_[srcIndex];
+      if (goog.structs.Map.hasKey_(this.map_, key)) {
+        this.keys_[destIndex++] = key;
+      }
+      srcIndex++;
+    }
+    this.keys_.length = destIndex;
+  }
+
+  if (this.count_ != this.keys_.length) {
+    // If the count still isn't correct, that means we have duplicates. This can
+    // happen when the same key is added and removed multiple times. Now we have
+    // to allocate one extra Object to remove the duplicates. This could have
+    // been done in the first pass, but in the common case, we can avoid
+    // allocating an extra object by only doing this when necessary.
+    var seen = {};
+    var srcIndex = 0;
+    var destIndex = 0;
+    while (srcIndex < this.keys_.length) {
+      var key = this.keys_[srcIndex];
+      if (!(goog.structs.Map.hasKey_(seen, key))) {
+        this.keys_[destIndex++] = key;
+        seen[key] = 1;
+      }
+      srcIndex++;
+    }
+    this.keys_.length = destIndex;
+  }
+};
+
+
+/**
+ * Returns the value for the given key.  If the key is not found and the default
+ * value is not given this will return {@code undefined}.
+ * @param {*} key The key to get the value for.
+ * @param {*=} opt_val The value to return if no item is found for the given
+ *     key, defaults to undefined.
+ * @return {*} The value for the given key.
+ */
+goog.structs.Map.prototype.get = function(key, opt_val) {
+  if (goog.structs.Map.hasKey_(this.map_, key)) {
+    return this.map_[key];
+  }
+  return opt_val;
+};
+
+
+/**
+ * Adds a key-value pair to the map.
+ * @param {*} key The key.
+ * @param {*} value The value to add.
+ */
+goog.structs.Map.prototype.set = function(key, value) {
+  if (!(goog.structs.Map.hasKey_(this.map_, key))) {
+    this.count_++;
+    this.keys_.push(key);
+    // Only change the version if we add a new key.
+    this.version_++;
+  }
+  this.map_[key] = value;
+};
+
+
+/**
+ * Adds multiple key-value pairs from another goog.structs.Map or Object.
+ * @param {Object} map  Object containing the data to add.
+ */
+goog.structs.Map.prototype.addAll = function(map) {
+  var keys, values;
+  if (map instanceof goog.structs.Map) {
+    keys = map.getKeys();
+    values = map.getValues();
+  } else {
+    keys = goog.object.getKeys(map);
+    values = goog.object.getValues(map);
+  }
+  // we could use goog.array.forEach here but I don't want to introduce that
+  // dependency just for this.
+  for (var i = 0; i < keys.length; i++) {
+    this.set(keys[i], values[i]);
+  }
+};
+
+
+/**
+ * Clones a map and returns a new map.
+ * @return {!goog.structs.Map} A new map with the same key-value pairs.
+ */
+goog.structs.Map.prototype.clone = function() {
+  return new goog.structs.Map(this);
+};
+
+
+/**
+ * Returns a new map in which all the keys and values are interchanged
+ * (keys become values and values become keys). If multiple keys map to the
+ * same value, the chosen transposed value is implementation-dependent.
+ *
+ * It acts very similarly to {goog.object.transpose(Object)}.
+ *
+ * @return {!goog.structs.Map} The transposed map.
+ */
+goog.structs.Map.prototype.transpose = function() {
+  var transposed = new goog.structs.Map();
+  for (var i = 0; i < this.keys_.length; i++) {
+    var key = this.keys_[i];
+    var value = this.map_[key];
+    transposed.set(value, key);
+  }
+
+  return transposed;
+};
+
+
+/**
+ * @return {!Object} Object representation of the map.
+ */
+goog.structs.Map.prototype.toObject = function() {
+  this.cleanupKeysArray_();
+  var obj = {};
+  for (var i = 0; i < this.keys_.length; i++) {
+    var key = this.keys_[i];
+    obj[key] = this.map_[key];
+  }
+  return obj;
+};
+
+
+/**
+ * Returns an iterator that iterates over the keys in the map.  Removal of keys
+ * while iterating might have undesired side effects.
+ * @return {!goog.iter.Iterator} An iterator over the keys in the map.
+ */
+goog.structs.Map.prototype.getKeyIterator = function() {
+  return this.__iterator__(true);
+};
+
+
+/**
+ * Returns an iterator that iterates over the values in the map.  Removal of
+ * keys while iterating might have undesired side effects.
+ * @return {!goog.iter.Iterator} An iterator over the values in the map.
+ */
+goog.structs.Map.prototype.getValueIterator = function() {
+  return this.__iterator__(false);
+};
+
+
+/**
+ * Returns an iterator that iterates over the values or the keys in the map.
+ * This throws an exception if the map was mutated since the iterator was
+ * created.
+ * @param {boolean=} opt_keys True to iterate over the keys. False to iterate
+ *     over the values.  The default value is false.
+ * @return {!goog.iter.Iterator} An iterator over the values or keys in the map.
+ */
+goog.structs.Map.prototype.__iterator__ = function(opt_keys) {
+  // Clean up keys to minimize the risk of iterating over dead keys.
+  this.cleanupKeysArray_();
+
+  var i = 0;
+  var keys = this.keys_;
+  var map = this.map_;
+  var version = this.version_;
+  var selfObj = this;
+
+  var newIter = new goog.iter.Iterator;
+  newIter.next = function() {
+    while (true) {
+      if (version != selfObj.version_) {
+        throw Error('The map has changed since the iterator was created');
+      }
+      if (i >= keys.length) {
+        throw goog.iter.StopIteration;
+      }
+      var key = keys[i++];
+      return opt_keys ? key : map[key];
+    }
+  };
+  return newIter;
+};
+
+
+/**
+ * Safe way to test for hasOwnProperty.  It even allows testing for
+ * 'hasOwnProperty'.
+ * @param {Object} obj The object to test for presence of the given key.
+ * @param {*} key The key to check for.
+ * @return {boolean} Whether the object has the key.
+ * @private
+ */
+goog.structs.Map.hasKey_ = function(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+};
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Datastructure: Set.
+ *
+ * @author arv@google.com (Erik Arvidsson)
+ * @author pallosp@google.com (Peter Pallos)
+ *
+ * This class implements a set data structure. Adding and removing is O(1). It
+ * supports both object and primitive values. Be careful because you can add
+ * both 1 and new Number(1), because these are not the same. You can even add
+ * multiple new Number(1) because these are not equal.
+ */
+
+
+goog.provide('goog.structs.Set');
+
+goog.require('goog.structs');
+goog.require('goog.structs.Collection');
+goog.require('goog.structs.Map');
+
+
+
+/**
+ * A set that can contain both primitives and objects.  Adding and removing
+ * elements is O(1).  Primitives are treated as identical if they have the same
+ * type and convert to the same string.  Objects are treated as identical only
+ * if they are references to the same object.  WARNING: A goog.structs.Set can
+ * contain both 1 and (new Number(1)), because they are not the same.  WARNING:
+ * Adding (new Number(1)) twice will yield two distinct elements, because they
+ * are two different objects.  WARNING: Any object that is added to a
+ * goog.structs.Set will be modified!  Because goog.getUid() is used to
+ * identify objects, every object in the set will be mutated.
+ * @param {Array|Object=} opt_values Initial values to start with.
+ * @constructor
+ * @implements {goog.structs.Collection}
+ */
+goog.structs.Set = function(opt_values) {
+  this.map_ = new goog.structs.Map;
+  if (opt_values) {
+    this.addAll(opt_values);
+  }
+};
+
+
+/**
+ * Obtains a unique key for an element of the set.  Primitives will yield the
+ * same key if they have the same type and convert to the same string.  Object
+ * references will yield the same key only if they refer to the same object.
+ * @param {*} val Object or primitive value to get a key for.
+ * @return {string} A unique key for this value/object.
+ * @private
+ */
+goog.structs.Set.getKey_ = function(val) {
+  var type = typeof val;
+  if (type == 'object' && val || type == 'function') {
+    return 'o' + goog.getUid(/** @type {Object} */ (val));
+  } else {
+    return type.substr(0, 1) + val;
+  }
+};
+
+
+/**
+ * @return {number} The number of elements in the set.
+ */
+goog.structs.Set.prototype.getCount = function() {
+  return this.map_.getCount();
+};
+
+
+/**
+ * Add a primitive or an object to the set.
+ * @param {*} element The primitive or object to add.
+ */
+goog.structs.Set.prototype.add = function(element) {
+  this.map_.set(goog.structs.Set.getKey_(element), element);
+};
+
+
+/**
+ * Adds all the values in the given collection to this set.
+ * @param {Array|Object} col A collection containing the elements to add.
+ */
+goog.structs.Set.prototype.addAll = function(col) {
+  var values = goog.structs.getValues(col);
+  var l = values.length;
+  for (var i = 0; i < l; i++) {
+    this.add(values[i]);
+  }
+};
+
+
+/**
+ * Removes all values in the given collection from this set.
+ * @param {Array|Object} col A collection containing the elements to remove.
+ */
+goog.structs.Set.prototype.removeAll = function(col) {
+  var values = goog.structs.getValues(col);
+  var l = values.length;
+  for (var i = 0; i < l; i++) {
+    this.remove(values[i]);
+  }
+};
+
+
+/**
+ * Removes the given element from this set.
+ * @param {*} element The primitive or object to remove.
+ * @return {boolean} Whether the element was found and removed.
+ */
+goog.structs.Set.prototype.remove = function(element) {
+  return this.map_.remove(goog.structs.Set.getKey_(element));
+};
+
+
+/**
+ * Removes all elements from this set.
+ */
+goog.structs.Set.prototype.clear = function() {
+  this.map_.clear();
+};
+
+
+/**
+ * Tests whether this set is empty.
+ * @return {boolean} True if there are no elements in this set.
+ */
+goog.structs.Set.prototype.isEmpty = function() {
+  return this.map_.isEmpty();
+};
+
+
+/**
+ * Tests whether this set contains the given element.
+ * @param {*} element The primitive or object to test for.
+ * @return {boolean} True if this set contains the given element.
+ */
+goog.structs.Set.prototype.contains = function(element) {
+  return this.map_.containsKey(goog.structs.Set.getKey_(element));
+};
+
+
+/**
+ * Tests whether this set contains all the values in a given collection.
+ * Repeated elements in the collection are ignored, e.g.  (new
+ * goog.structs.Set([1, 2])).containsAll([1, 1]) is True.
+ * @param {Object} col A collection-like object.
+ * @return {boolean} True if the set contains all elements.
+ */
+goog.structs.Set.prototype.containsAll = function(col) {
+  return goog.structs.every(col, this.contains, this);
+};
+
+
+/**
+ * Finds all values that are present in both this set and the given collection.
+ * @param {Array|Object} col A collection.
+ * @return {!goog.structs.Set} A new set containing all the values (primitives
+ *     or objects) present in both this set and the given collection.
+ */
+goog.structs.Set.prototype.intersection = function(col) {
+  var result = new goog.structs.Set();
+
+  var values = goog.structs.getValues(col);
+  for (var i = 0; i < values.length; i++) {
+    var value = values[i];
+    if (this.contains(value)) {
+      result.add(value);
+    }
+  }
+
+  return result;
+};
+
+
+/**
+ * Finds all values that are present in this set and not in the given
+ * collection.
+ * @param {Array|Object} col A collection.
+ * @return {!goog.structs.Set} A new set containing all the values
+ *     (primitives or objects) present in this set but not in the given
+ *     collection.
+ */
+goog.structs.Set.prototype.difference = function(col) {
+  var result = this.clone();
+  result.removeAll(col);
+  return result;
+};
+
+
+/**
+ * Returns an array containing all the elements in this set.
+ * @return {!Array} An array containing all the elements in this set.
+ */
+goog.structs.Set.prototype.getValues = function() {
+  return this.map_.getValues();
+};
+
+
+/**
+ * Creates a shallow clone of this set.
+ * @return {!goog.structs.Set} A new set containing all the same elements as
+ *     this set.
+ */
+goog.structs.Set.prototype.clone = function() {
+  return new goog.structs.Set(this);
+};
+
+
+/**
+ * Tests whether the given collection consists of the same elements as this set,
+ * regardless of order, without repetition.  Primitives are treated as equal if
+ * they have the same type and convert to the same string; objects are treated
+ * as equal if they are references to the same object.  This operation is O(n).
+ * @param {Object} col A collection.
+ * @return {boolean} True if the given collection consists of the same elements
+ *     as this set, regardless of order, without repetition.
+ */
+goog.structs.Set.prototype.equals = function(col) {
+  return this.getCount() == goog.structs.getCount(col) && this.isSubsetOf(col);
+};
+
+
+/**
+ * Tests whether the given collection contains all the elements in this set.
+ * Primitives are treated as equal if they have the same type and convert to the
+ * same string; objects are treated as equal if they are references to the same
+ * object.  This operation is O(n).
+ * @param {Object} col A collection.
+ * @return {boolean} True if this set is a subset of the given collection.
+ */
+goog.structs.Set.prototype.isSubsetOf = function(col) {
+  var colCount = goog.structs.getCount(col);
+  if (this.getCount() > colCount) {
+    return false;
+  }
+  // TODO(user) Find the minimal collection size where the conversion makes
+  // the contains() method faster.
+  if (!(col instanceof goog.structs.Set) && colCount > 5) {
+    // Convert to a goog.structs.Set so that goog.structs.contains runs in
+    // O(1) time instead of O(n) time.
+    col = new goog.structs.Set(col);
+  }
+  return goog.structs.every(this, function(value) {
+    return goog.structs.contains(col, value);
+  });
+};
+
+
+/**
+ * Returns an iterator that iterates over the elements in this set.
+ * @param {boolean=} opt_keys This argument is ignored.
+ * @return {!goog.iter.Iterator} An iterator over the elements in this set.
+ */
+goog.structs.Set.prototype.__iterator__ = function(opt_keys) {
+  return this.map_.__iterator__(false);
+};
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Logging and debugging utilities.
+ *
+
+ * @see ../demos/debug.html
+ */
+
+goog.provide('goog.debug');
+
+goog.require('goog.array');
+goog.require('goog.string');
+goog.require('goog.structs.Set');
+goog.require('goog.userAgent');
+
+
+/**
+ * Catches onerror events fired by windows and similar objects.
+ * @param {function(Object)} logFunc The function to call with the error
+ *    information.
+ * @param {boolean=} opt_cancel Whether to stop the error from reaching the
+ *    browser.
+ * @param {Object=} opt_target Object that fires onerror events.
+ */
+goog.debug.catchErrors = function(logFunc, opt_cancel, opt_target) {
+  var target = opt_target || goog.global;
+  var oldErrorHandler = target.onerror;
+  var retVal = !!opt_cancel;
+
+  // Chrome interprets onerror return value backwards (http://crbug.com/92062)
+  // until it was fixed in webkit revision r94061 (Webkit 535.3). This
+  // workaround still needs to be skipped in Safari after the webkit change
+  // gets pushed out in Safari.
+  // See https://bugs.webkit.org/show_bug.cgi?id=67119
+  if (goog.userAgent.WEBKIT && !goog.userAgent.isVersion('535.3')) {
+    retVal = !retVal;
+  }
+  target.onerror = function(message, url, line) {
+    if (oldErrorHandler) {
+      oldErrorHandler(message, url, line);
+    }
+    logFunc({
+      message: message,
+      fileName: url,
+      line: line
+    });
+    return retVal;
+  };
+};
+
+
+/**
+ * Creates a string representing an object and all its properties.
+ * @param {Object|null|undefined} obj Object to expose.
+ * @param {boolean=} opt_showFn Show the functions as well as the properties,
+ *     default is false.
+ * @return {string} The string representation of {@code obj}.
+ */
+goog.debug.expose = function(obj, opt_showFn) {
+  if (typeof obj == 'undefined') {
+    return 'undefined';
+  }
+  if (obj == null) {
+    return 'NULL';
+  }
+  var str = [];
+
+  for (var x in obj) {
+    if (!opt_showFn && goog.isFunction(obj[x])) {
+      continue;
+    }
+    var s = x + ' = ';
+    /** @preserveTry */
+    try {
+      s += obj[x];
+    } catch (e) {
+      s += '*** ' + e + ' ***';
+    }
+    str.push(s);
+  }
+  return str.join('\n');
+};
+
+
+/**
+ * Creates a string representing a given primitive or object, and for an
+ * object, all its properties and nested objects.  WARNING: If an object is
+ * given, it and all its nested objects will be modified.  To detect reference
+ * cycles, this method identifies objects using goog.getUid() which mutates the
+ * object.
+ * @param {*} obj Object to expose.
+ * @param {boolean=} opt_showFn Also show properties that are functions (by
+ *     default, functions are omitted).
+ * @return {string} A string representation of {@code obj}.
+ */
+goog.debug.deepExpose = function(obj, opt_showFn) {
+  var previous = new goog.structs.Set();
+  var str = [];
+
+  var helper = function(obj, space) {
+    var nestspace = space + '  ';
+
+    var indentMultiline = function(str) {
+      return str.replace(/\n/g, '\n' + space);
+    };
+
+    /** @preserveTry */
+    try {
+      if (!goog.isDef(obj)) {
+        str.push('undefined');
+      } else if (goog.isNull(obj)) {
+        str.push('NULL');
+      } else if (goog.isString(obj)) {
+        str.push('"' + indentMultiline(obj) + '"');
+      } else if (goog.isFunction(obj)) {
+        str.push(indentMultiline(String(obj)));
+      } else if (goog.isObject(obj)) {
+        if (previous.contains(obj)) {
+          // TODO(user): This is a bug; it falsely detects non-loops as loops
+          // when the reference tree contains two references to the same object.
+          str.push('*** reference loop detected ***');
+        } else {
+          previous.add(obj);
+          str.push('{');
+          for (var x in obj) {
+            if (!opt_showFn && goog.isFunction(obj[x])) {
+              continue;
+            }
+            str.push('\n');
+            str.push(nestspace);
+            str.push(x + ' = ');
+            helper(obj[x], nestspace);
+          }
+          str.push('\n' + space + '}');
+        }
+      } else {
+        str.push(obj);
+      }
+    } catch (e) {
+      str.push('*** ' + e + ' ***');
+    }
+  };
+
+  helper(obj, '');
+  return str.join('');
+};
+
+
+/**
+ * Recursively outputs a nested array as a string.
+ * @param {Array} arr The array.
+ * @return {string} String representing nested array.
+ */
+goog.debug.exposeArray = function(arr) {
+  var str = [];
+  for (var i = 0; i < arr.length; i++) {
+    if (goog.isArray(arr[i])) {
+      str.push(goog.debug.exposeArray(arr[i]));
+    } else {
+      str.push(arr[i]);
+    }
+  }
+  return '[ ' + str.join(', ') + ' ]';
+};
+
+
+/**
+ * Exposes an exception that has been caught by a try...catch and outputs the
+ * error with a stack trace.
+ * @param {Object} err Error object or string.
+ * @param {Function=} opt_fn Optional function to start stack trace from.
+ * @return {string} Details of exception.
+ */
+goog.debug.exposeException = function(err, opt_fn) {
+  /** @preserveTry */
+  try {
+    var e = goog.debug.normalizeErrorObject(err);
+
+    // Create the error message
+    var error = 'Message: ' + goog.string.htmlEscape(e.message) +
+        '\nUrl: <a href="view-source:' + e.fileName + '" target="_new">' +
+        e.fileName + '</a>\nLine: ' + e.lineNumber + '\n\nBrowser stack:\n' +
+        goog.string.htmlEscape(e.stack + '-> ') +
+        '[end]\n\nJS stack traversal:\n' + goog.string.htmlEscape(
+            goog.debug.getStacktrace(opt_fn) + '-> ');
+    return error;
+  } catch (e2) {
+    return 'Exception trying to expose exception! You win, we lose. ' + e2;
+  }
+};
+
+
+/**
+ * Normalizes the error/exception object between browsers.
+ * @param {Object} err Raw error object.
+ * @return {Object} Normalized error object.
+ */
+goog.debug.normalizeErrorObject = function(err) {
+  var href = goog.getObjectByName('window.location.href');
+  if (goog.isString(err)) {
+    return {
+      'message': err,
+      'name': 'Unknown error',
+      'lineNumber': 'Not available',
+      'fileName': href,
+      'stack': 'Not available'
+    };
+  }
+
+  var lineNumber, fileName;
+  var threwError = false;
+
+  try {
+    lineNumber = err.lineNumber || err.line || 'Not available';
+  } catch (e) {
+    // Firefox 2 sometimes throws an error when accessing 'lineNumber':
+    // Message: Permission denied to get property UnnamedClass.lineNumber
+    lineNumber = 'Not available';
+    threwError = true;
+  }
+
+  try {
+    fileName = err.fileName || err.filename || err.sourceURL || href;
+  } catch (e) {
+    // Firefox 2 may also throw an error when accessing 'filename'.
+    fileName = 'Not available';
+    threwError = true;
+  }
+
+  // The IE Error object contains only the name and the message.
+  // The Safari Error object uses the line and sourceURL fields.
+  if (threwError || !err.lineNumber || !err.fileName || !err.stack) {
+    return {
+      'message': err.message,
+      'name': err.name,
+      'lineNumber': lineNumber,
+      'fileName': fileName,
+      'stack': err.stack || 'Not available'
+    };
+  }
+
+  // Standards error object
+  return err;
+};
+
+
+/**
+ * Converts an object to an Error if it's a String,
+ * adds a stacktrace if there isn't one,
+ * and optionally adds an extra message.
+ * @param {Error|string} err  the original thrown object or string.
+ * @param {string=} opt_message  optional additional message to add to the
+ *     error.
+ * @return {Error} If err is a string, it is used to create a new Error,
+ *     which is enhanced and returned.  Otherwise err itself is enhanced
+ *     and returned.
+ */
+goog.debug.enhanceError = function(err, opt_message) {
+  var error = typeof err == 'string' ? Error(err) : err;
+  if (!error.stack) {
+    error.stack = goog.debug.getStacktrace(arguments.callee.caller);
+  }
+  if (opt_message) {
+    // find the first unoccupied 'messageX' property
+    var x = 0;
+    while (error['message' + x]) {
+      ++x;
+    }
+    error['message' + x] = String(opt_message);
+  }
+  return error;
+};
+
+
+/**
+ * Gets the current stack trace. Simple and iterative - doesn't worry about
+ * catching circular references or getting the args.
+ * @param {number=} opt_depth Optional maximum depth to trace back to.
+ * @return {string} A string with the function names of all functions in the
+ *     stack, separated by \n.
+ */
+goog.debug.getStacktraceSimple = function(opt_depth) {
+  var sb = [];
+  var fn = arguments.callee.caller;
+  var depth = 0;
+
+  while (fn && (!opt_depth || depth < opt_depth)) {
+    sb.push(goog.debug.getFunctionName(fn));
+    sb.push('()\n');
+    /** @preserveTry */
+    try {
+      fn = fn.caller;
+    } catch (e) {
+      sb.push('[exception trying to get caller]\n');
+      break;
+    }
+    depth++;
+    if (depth >= goog.debug.MAX_STACK_DEPTH) {
+      sb.push('[...long stack...]');
+      break;
+    }
+  }
+  if (opt_depth && depth >= opt_depth) {
+    sb.push('[...reached max depth limit...]');
+  } else {
+    sb.push('[end]');
+  }
+
+  return sb.join('');
+};
+
+
+/**
+ * Max length of stack to try and output
+ * @type {number}
+ */
+goog.debug.MAX_STACK_DEPTH = 50;
+
+
+/**
+ * Gets the current stack trace, either starting from the caller or starting
+ * from a specified function that's currently on the call stack.
+ * @param {Function=} opt_fn Optional function to start getting the trace from.
+ *     If not provided, defaults to the function that called this.
+ * @return {string} Stack trace.
+ */
+goog.debug.getStacktrace = function(opt_fn) {
+  return goog.debug.getStacktraceHelper_(opt_fn || arguments.callee.caller, []);
+};
+
+
+/**
+ * Private helper for getStacktrace().
+ * @param {Function} fn Function to start getting the trace from.
+ * @param {Array} visited List of functions visited so far.
+ * @return {string} Stack trace starting from function fn.
+ * @private
+ */
+goog.debug.getStacktraceHelper_ = function(fn, visited) {
+  var sb = [];
+
+  // Circular reference, certain functions like bind seem to cause a recursive
+  // loop so we need to catch circular references
+  if (goog.array.contains(visited, fn)) {
+    sb.push('[...circular reference...]');
+
+  // Traverse the call stack until function not found or max depth is reached
+  } else if (fn && visited.length < goog.debug.MAX_STACK_DEPTH) {
+    sb.push(goog.debug.getFunctionName(fn) + '(');
+    var args = fn.arguments;
+    for (var i = 0; i < args.length; i++) {
+      if (i > 0) {
+        sb.push(', ');
+      }
+      var argDesc;
+      var arg = args[i];
+      switch (typeof arg) {
+        case 'object':
+          argDesc = arg ? 'object' : 'null';
+          break;
+
+        case 'string':
+          argDesc = arg;
+          break;
+
+        case 'number':
+          argDesc = String(arg);
+          break;
+
+        case 'boolean':
+          argDesc = arg ? 'true' : 'false';
+          break;
+
+        case 'function':
+          argDesc = goog.debug.getFunctionName(arg);
+          argDesc = argDesc ? argDesc : '[fn]';
+          break;
+
+        case 'undefined':
+        default:
+          argDesc = typeof arg;
+          break;
+      }
+
+      if (argDesc.length > 40) {
+        argDesc = argDesc.substr(0, 40) + '...';
+      }
+      sb.push(argDesc);
+    }
+    visited.push(fn);
+    sb.push(')\n');
+    /** @preserveTry */
+    try {
+      sb.push(goog.debug.getStacktraceHelper_(fn.caller, visited));
+    } catch (e) {
+      sb.push('[exception trying to get caller]\n');
+    }
+
+  } else if (fn) {
+    sb.push('[...long stack...]');
+  } else {
+    sb.push('[end]');
+  }
+  return sb.join('');
+};
+
+
+/**
+ * Set a custom function name resolver.
+ * @param {function(Function): string} resolver Resolves functions to their
+ *     names.
+ */
+goog.debug.setFunctionResolver = function(resolver) {
+  goog.debug.fnNameResolver_ = resolver;
+};
+
+
+/**
+ * Gets a function name
+ * @param {Function} fn Function to get name of.
+ * @return {string} Function's name.
+ */
+goog.debug.getFunctionName = function(fn) {
+  if (goog.debug.fnNameCache_[fn]) {
+    return goog.debug.fnNameCache_[fn];
+  }
+  if (goog.debug.fnNameResolver_) {
+    var name = goog.debug.fnNameResolver_(fn);
+    if (name) {
+      goog.debug.fnNameCache_[fn] = name;
+      return name;
+    }
+  }
+
+  // Heuristically determine function name based on code.
+  var functionSource = String(fn);
+  if (!goog.debug.fnNameCache_[functionSource]) {
+    var matches = /function ([^\(]+)/.exec(functionSource);
+    if (matches) {
+      var method = matches[1];
+      goog.debug.fnNameCache_[functionSource] = method;
+    } else {
+      goog.debug.fnNameCache_[functionSource] = '[Anonymous]';
+    }
+  }
+
+  return goog.debug.fnNameCache_[functionSource];
+};
+
+
+/**
+ * Makes whitespace visible by replacing it with printable characters.
+ * This is useful in finding diffrences between the expected and the actual
+ * output strings of a testcase.
+ * @param {string} string whose whitespace needs to be made visible.
+ * @return {string} string whose whitespace is made visible.
+ */
+goog.debug.makeWhitespaceVisible = function(string) {
+  return string.replace(/ /g, '[_]')
+      .replace(/\f/g, '[f]')
+      .replace(/\n/g, '[n]\n')
+      .replace(/\r/g, '[r]')
+      .replace(/\t/g, '[t]');
+};
+
+
+/**
+ * Hash map for storing function names that have already been looked up.
+ * @type {Object}
+ * @private
+ */
+goog.debug.fnNameCache_ = {};
+
+
+/**
+ * Resolves functions to their names.  Resolved function names will be cached.
+ * @type {function(Function):string}
+ * @private
+ */
+goog.debug.fnNameResolver_;
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Definition of the LogRecord class. Please minimize
+ * dependencies this file has on other closure classes as any dependency it
+ * takes won't be able to use the logging infrastructure.
+ *
+ */
+
+goog.provide('goog.debug.LogRecord');
+
+
+
+/**
+ * LogRecord objects are used to pass logging requests between
+ * the logging framework and individual log Handlers.
+ * @constructor
+ * @param {goog.debug.Logger.Level} level One of the level identifiers.
+ * @param {string} msg The string message.
+ * @param {string} loggerName The name of the source logger.
+ * @param {number=} opt_time Time this log record was created if other than now.
+ *     If 0, we use #goog.now.
+ * @param {number=} opt_sequenceNumber Sequence number of this log record. This
+ *     should only be passed in when restoring a log record from persistence.
+ */
+goog.debug.LogRecord = function(level, msg, loggerName,
+    opt_time, opt_sequenceNumber) {
+  this.reset(level, msg, loggerName, opt_time, opt_sequenceNumber);
+};
+
+
+/**
+ * Time the LogRecord was created.
+ * @type {number}
+ * @private
+ */
+goog.debug.LogRecord.prototype.time_;
+
+
+/**
+ * Level of the LogRecord
+ * @type {goog.debug.Logger.Level}
+ * @private
+ */
+goog.debug.LogRecord.prototype.level_;
+
+
+/**
+ * Message associated with the record
+ * @type {string}
+ * @private
+ */
+goog.debug.LogRecord.prototype.msg_;
+
+
+/**
+ * Name of the logger that created the record.
+ * @type {string}
+ * @private
+ */
+goog.debug.LogRecord.prototype.loggerName_;
+
+
+/**
+ * Sequence number for the LogRecord. Each record has a unique sequence number
+ * that is greater than all log records created before it.
+ * @type {number}
+ * @private
+ */
+goog.debug.LogRecord.prototype.sequenceNumber_ = 0;
+
+
+/**
+ * Exception associated with the record
+ * @type {Object}
+ * @private
+ */
+goog.debug.LogRecord.prototype.exception_ = null;
+
+
+/**
+ * Exception text associated with the record
+ * @type {?string}
+ * @private
+ */
+goog.debug.LogRecord.prototype.exceptionText_ = null;
+
+
+/**
+ * @define {boolean} Whether to enable log sequence numbers.
+ */
+goog.debug.LogRecord.ENABLE_SEQUENCE_NUMBERS = true;
+
+
+/**
+ * A sequence counter for assigning increasing sequence numbers to LogRecord
+ * objects.
+ * @type {number}
+ * @private
+ */
+goog.debug.LogRecord.nextSequenceNumber_ = 0;
+
+
+/**
+ * Sets all fields of the log record.
+ * @param {goog.debug.Logger.Level} level One of the level identifiers.
+ * @param {string} msg The string message.
+ * @param {string} loggerName The name of the source logger.
+ * @param {number=} opt_time Time this log record was created if other than now.
+ *     If 0, we use #goog.now.
+ * @param {number=} opt_sequenceNumber Sequence number of this log record. This
+ *     should only be passed in when restoring a log record from persistence.
+ */
+goog.debug.LogRecord.prototype.reset = function(level, msg, loggerName,
+    opt_time, opt_sequenceNumber) {
+  if (goog.debug.LogRecord.ENABLE_SEQUENCE_NUMBERS) {
+    this.sequenceNumber_ = typeof opt_sequenceNumber == 'number' ?
+        opt_sequenceNumber : goog.debug.LogRecord.nextSequenceNumber_++;
+  }
+
+  this.time_ = opt_time || goog.now();
+  this.level_ = level;
+  this.msg_ = msg;
+  this.loggerName_ = loggerName;
+  delete this.exception_;
+  delete this.exceptionText_;
+};
+
+
+/**
+ * Get the source Logger's name.
+ *
+ * @return {string} source logger name (may be null).
+ */
+goog.debug.LogRecord.prototype.getLoggerName = function() {
+  return this.loggerName_;
+};
+
+
+/**
+ * Get the exception that is part of the log record.
+ *
+ * @return {Object} the exception.
+ */
+goog.debug.LogRecord.prototype.getException = function() {
+  return this.exception_;
+};
+
+
+/**
+ * Set the exception that is part of the log record.
+ *
+ * @param {Object} exception the exception.
+ */
+goog.debug.LogRecord.prototype.setException = function(exception) {
+  this.exception_ = exception;
+};
+
+
+/**
+ * Get the exception text that is part of the log record.
+ *
+ * @return {?string} Exception text.
+ */
+goog.debug.LogRecord.prototype.getExceptionText = function() {
+  return this.exceptionText_;
+};
+
+
+/**
+ * Set the exception text that is part of the log record.
+ *
+ * @param {string} text The exception text.
+ */
+goog.debug.LogRecord.prototype.setExceptionText = function(text) {
+  this.exceptionText_ = text;
+};
+
+
+/**
+ * Get the source Logger's name.
+ *
+ * @param {string} loggerName source logger name (may be null).
+ */
+goog.debug.LogRecord.prototype.setLoggerName = function(loggerName) {
+  this.loggerName_ = loggerName;
+};
+
+
+/**
+ * Get the logging message level, for example Level.SEVERE.
+ * @return {goog.debug.Logger.Level} the logging message level.
+ */
+goog.debug.LogRecord.prototype.getLevel = function() {
+  return this.level_;
+};
+
+
+/**
+ * Set the logging message level, for example Level.SEVERE.
+ * @param {goog.debug.Logger.Level} level the logging message level.
+ */
+goog.debug.LogRecord.prototype.setLevel = function(level) {
+  this.level_ = level;
+};
+
+
+/**
+ * Get the "raw" log message, before localization or formatting.
+ *
+ * @return {string} the raw message string.
+ */
+goog.debug.LogRecord.prototype.getMessage = function() {
+  return this.msg_;
+};
+
+
+/**
+ * Set the "raw" log message, before localization or formatting.
+ *
+ * @param {string} msg the raw message string.
+ */
+goog.debug.LogRecord.prototype.setMessage = function(msg) {
+  this.msg_ = msg;
+};
+
+
+/**
+ * Get event time in milliseconds since 1970.
+ *
+ * @return {number} event time in millis since 1970.
+ */
+goog.debug.LogRecord.prototype.getMillis = function() {
+  return this.time_;
+};
+
+
+/**
+ * Set event time in milliseconds since 1970.
+ *
+ * @param {number} time event time in millis since 1970.
+ */
+goog.debug.LogRecord.prototype.setMillis = function(time) {
+  this.time_ = time;
+};
+
+
+/**
+ * Get the sequence number.
+ * <p>
+ * Sequence numbers are normally assigned in the LogRecord
+ * constructor, which assigns unique sequence numbers to
+ * each new LogRecord in increasing order.
+ * @return {number} the sequence number.
+ */
+goog.debug.LogRecord.prototype.getSequenceNumber = function() {
+  return this.sequenceNumber_;
+};
+
+// Copyright 2010 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview A buffer for log records. The purpose of this is to improve
+ * logging performance by re-using old objects when the buffer becomes full and
+ * to eliminate the need for each app to implement their own log buffer. The
+ * disadvantage to doing this is that log handlers cannot maintain references to
+ * log records and expect that they are not overwriten at a later point.
+ *
+ * @author agrieve@google.com (Andrew Grieve)
+ */
+
+goog.provide('goog.debug.LogBuffer');
+
+goog.require('goog.asserts');
+goog.require('goog.debug.LogRecord');
+
+
+
+/**
+ * Creates the log buffer.
+ * @constructor
+ */
+goog.debug.LogBuffer = function() {
+  goog.asserts.assert(goog.debug.LogBuffer.isBufferingEnabled(),
+      'Cannot use goog.debug.LogBuffer without defining ' +
+      'goog.debug.LogBuffer.CAPACITY.');
+  this.clear();
+};
+
+
+/**
+ * A static method that always returns the same instance of LogBuffer.
+ * @return {!goog.debug.LogBuffer} The LogBuffer singleton instance.
+ */
+goog.debug.LogBuffer.getInstance = function() {
+  if (!goog.debug.LogBuffer.instance_) {
+    // This function is written with the return statement after the assignment
+    // to avoid the jscompiler StripCode bug described in http://b/2608064.
+    // After that bug is fixed this can be refactored.
+    goog.debug.LogBuffer.instance_ = new goog.debug.LogBuffer();
+  }
+  return goog.debug.LogBuffer.instance_;
+};
+
+
+/**
+ * @define {number} The number of log records to buffer. 0 means disable
+ * buffering.
+ */
+goog.debug.LogBuffer.CAPACITY = 0;
+
+
+/**
+ * The array to store the records.
+ * @type {!Array.<!goog.debug.LogRecord|undefined>}
+ * @private
+ */
+goog.debug.LogBuffer.prototype.buffer_;
+
+
+/**
+ * The index of the most recently added record or -1 if there are no records.
+ * @type {number}
+ * @private
+ */
+goog.debug.LogBuffer.prototype.curIndex_;
+
+
+/**
+ * Whether the buffer is at capacity.
+ * @type {boolean}
+ * @private
+ */
+goog.debug.LogBuffer.prototype.isFull_;
+
+
+/**
+ * Adds a log record to the buffer, possibly overwriting the oldest record.
+ * @param {goog.debug.Logger.Level} level One of the level identifiers.
+ * @param {string} msg The string message.
+ * @param {string} loggerName The name of the source logger.
+ * @return {!goog.debug.LogRecord} The log record.
+ */
+goog.debug.LogBuffer.prototype.addRecord = function(level, msg, loggerName) {
+  var curIndex = (this.curIndex_ + 1) % goog.debug.LogBuffer.CAPACITY;
+  this.curIndex_ = curIndex;
+  if (this.isFull_) {
+    var ret = this.buffer_[curIndex];
+    ret.reset(level, msg, loggerName);
+    return ret;
+  }
+  this.isFull_ = curIndex == goog.debug.LogBuffer.CAPACITY - 1;
+  return this.buffer_[curIndex] =
+      new goog.debug.LogRecord(level, msg, loggerName);
+};
+
+
+/**
+ * @return {boolean} Whether the log buffer is enabled.
+ */
+goog.debug.LogBuffer.isBufferingEnabled = function() {
+  return goog.debug.LogBuffer.CAPACITY > 0;
+};
+
+
+/**
+ * Removes all buffered log records.
+ */
+goog.debug.LogBuffer.prototype.clear = function() {
+  this.buffer_ = new Array(goog.debug.LogBuffer.CAPACITY);
+  this.curIndex_ = -1;
+  this.isFull_ = false;
+};
+
+
+/**
+ * Calls the given function for each buffered log record, starting with the
+ * oldest one.
+ * @param {function(!goog.debug.LogRecord)} func The function to call.
+ */
+goog.debug.LogBuffer.prototype.forEachRecord = function(func) {
+  var buffer = this.buffer_;
+  // Corner case: no records.
+  if (!buffer[0]) {
+    return;
+  }
+  var curIndex = this.curIndex_;
+  var i = this.isFull_ ? curIndex : -1;
+  do {
+    i = (i + 1) % goog.debug.LogBuffer.CAPACITY;
+    func(/** @type {!goog.debug.LogRecord} */ (buffer[i]));
+  } while (i != curIndex);
+};
+
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Definition of the Logger class. Please minimize dependencies
+ * this file has on other closure classes as any dependency it takes won't be
+ * able to use the logging infrastructure.
+ *
+ * @see ../demos/debug.html
+ */
+
+goog.provide('goog.debug.LogManager');
+goog.provide('goog.debug.Logger');
+goog.provide('goog.debug.Logger.Level');
+
+goog.require('goog.array');
+goog.require('goog.asserts');
+goog.require('goog.debug');
+goog.require('goog.debug.LogBuffer');
+goog.require('goog.debug.LogRecord');
+
+
+
+/**
+ * The Logger is an object used for logging debug messages. Loggers are
+ * normally named, using a hierarchical dot-separated namespace. Logger names
+ * can be arbitrary strings, but they should normally be based on the package
+ * name or class name of the logged component, such as goog.net.BrowserChannel.
+ *
+ * The Logger object is loosely based on the java class
+ * java.util.logging.Logger. It supports different levels of filtering for
+ * different loggers.
+ *
+ * The logger object should never be instantiated by application code. It
+ * should always use the goog.debug.Logger.getLogger function.
+ *
+ * @constructor
+ * @param {string} name The name of the Logger.
+ */
+goog.debug.Logger = function(name) {
+  /**
+   * Name of the Logger. Generally a dot-separated namespace
+   * @type {string}
+   * @private
+   */
+  this.name_ = name;
+};
+
+
+/**
+ * Parent Logger.
+ * @type {goog.debug.Logger}
+ * @private
+ */
+goog.debug.Logger.prototype.parent_ = null;
+
+
+/**
+ * Level that this logger only filters above. Null indicates it should
+ * inherit from the parent.
+ * @type {goog.debug.Logger.Level}
+ * @private
+ */
+goog.debug.Logger.prototype.level_ = null;
+
+
+/**
+ * Map of children loggers. The keys are the leaf names of the children and
+ * the values are the child loggers.
+ * @type {Object}
+ * @private
+ */
+goog.debug.Logger.prototype.children_ = null;
+
+
+/**
+ * Handlers that are listening to this logger.
+ * @type {Array.<Function>}
+ * @private
+ */
+goog.debug.Logger.prototype.handlers_ = null;
+
+
+/**
+ * @define {boolean} Toggles whether loggers other than the root logger can have
+ *     log handlers attached to them and whether they can have their log level
+ *     set. Logging is a bit faster when this is set to false.
+ */
+goog.debug.Logger.ENABLE_HIERARCHY = true;
+
+
+if (!goog.debug.Logger.ENABLE_HIERARCHY) {
+  /**
+   * @type {!Array.<Function>}
+   * @private
+   */
+  goog.debug.Logger.rootHandlers_ = [];
+
+
+  /**
+   * @type {goog.debug.Logger.Level}
+   * @private
+   */
+  goog.debug.Logger.rootLevel_;
+}
+
+
+
+/**
+ * The Level class defines a set of standard logging levels that
+ * can be used to control logging output.  The logging Level objects
+ * are ordered and are specified by ordered integers.  Enabling logging
+ * at a given level also enables logging at all higher levels.
+ * <p>
+ * Clients should normally use the predefined Level constants such
+ * as Level.SEVERE.
+ * <p>
+ * The levels in descending order are:
+ * <ul>
+ * <li>SEVERE (highest value)
+ * <li>WARNING
+ * <li>INFO
+ * <li>CONFIG
+ * <li>FINE
+ * <li>FINER
+ * <li>FINEST  (lowest value)
+ * </ul>
+ * In addition there is a level OFF that can be used to turn
+ * off logging, and a level ALL that can be used to enable
+ * logging of all messages.
+ *
+ * @param {string} name The name of the level.
+ * @param {number} value The numeric value of the level.
+ * @constructor
+ */
+goog.debug.Logger.Level = function(name, value) {
+  /**
+   * The name of the level
+   * @type {string}
+   */
+  this.name = name;
+
+  /**
+   * The numeric value of the level
+   * @type {number}
+   */
+  this.value = value;
+};
+
+
+/**
+ * @return {string} String representation of the logger level.
+ */
+goog.debug.Logger.Level.prototype.toString = function() {
+  return this.name;
+};
+
+
+/**
+ * OFF is a special level that can be used to turn off logging.
+ * This level is initialized to <CODE>Number.MAX_VALUE</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.OFF =
+    new goog.debug.Logger.Level('OFF', Infinity);
+
+
+/**
+ * SHOUT is a message level for extra debugging loudness.
+ * This level is initialized to <CODE>1200</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.SHOUT = new goog.debug.Logger.Level('SHOUT', 1200);
+
+
+/**
+ * SEVERE is a message level indicating a serious failure.
+ * This level is initialized to <CODE>1000</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.SEVERE = new goog.debug.Logger.Level('SEVERE', 1000);
+
+
+/**
+ * WARNING is a message level indicating a potential problem.
+ * This level is initialized to <CODE>900</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.WARNING = new goog.debug.Logger.Level('WARNING', 900);
+
+
+/**
+ * INFO is a message level for informational messages.
+ * This level is initialized to <CODE>800</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.INFO = new goog.debug.Logger.Level('INFO', 800);
+
+
+/**
+ * CONFIG is a message level for static configuration messages.
+ * This level is initialized to <CODE>700</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.CONFIG = new goog.debug.Logger.Level('CONFIG', 700);
+
+
+/**
+ * FINE is a message level providing tracing information.
+ * This level is initialized to <CODE>500</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.FINE = new goog.debug.Logger.Level('FINE', 500);
+
+
+/**
+ * FINER indicates a fairly detailed tracing message.
+ * This level is initialized to <CODE>400</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.FINER = new goog.debug.Logger.Level('FINER', 400);
+
+/**
+ * FINEST indicates a highly detailed tracing message.
+ * This level is initialized to <CODE>300</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+
+goog.debug.Logger.Level.FINEST = new goog.debug.Logger.Level('FINEST', 300);
+
+
+/**
+ * ALL indicates that all messages should be logged.
+ * This level is initialized to <CODE>Number.MIN_VALUE</CODE>.
+ * @type {!goog.debug.Logger.Level}
+ */
+goog.debug.Logger.Level.ALL = new goog.debug.Logger.Level('ALL', 0);
+
+
+/**
+ * The predefined levels.
+ * @type {!Array.<!goog.debug.Logger.Level>}
+ * @final
+ */
+goog.debug.Logger.Level.PREDEFINED_LEVELS = [
+  goog.debug.Logger.Level.OFF,
+  goog.debug.Logger.Level.SHOUT,
+  goog.debug.Logger.Level.SEVERE,
+  goog.debug.Logger.Level.WARNING,
+  goog.debug.Logger.Level.INFO,
+  goog.debug.Logger.Level.CONFIG,
+  goog.debug.Logger.Level.FINE,
+  goog.debug.Logger.Level.FINER,
+  goog.debug.Logger.Level.FINEST,
+  goog.debug.Logger.Level.ALL];
+
+
+/**
+ * A lookup map used to find the level object based on the name or value of
+ * the level object.
+ * @type {Object}
+ * @private
+ */
+goog.debug.Logger.Level.predefinedLevelsCache_ = null;
+
+
+/**
+ * Creates the predefined levels cache and populates it.
+ * @private
+ */
+goog.debug.Logger.Level.createPredefinedLevelsCache_ = function() {
+  goog.debug.Logger.Level.predefinedLevelsCache_ = {};
+  for (var i = 0, level; level = goog.debug.Logger.Level.PREDEFINED_LEVELS[i];
+       i++) {
+    goog.debug.Logger.Level.predefinedLevelsCache_[level.value] = level;
+    goog.debug.Logger.Level.predefinedLevelsCache_[level.name] = level;
+  }
+};
+
+
+/**
+ * Gets the predefined level with the given name.
+ * @param {string} name The name of the level.
+ * @return {goog.debug.Logger.Level} The level, or null if none found.
+ */
+goog.debug.Logger.Level.getPredefinedLevel = function(name) {
+  if (!goog.debug.Logger.Level.predefinedLevelsCache_) {
+    goog.debug.Logger.Level.createPredefinedLevelsCache_();
+  }
+
+  return goog.debug.Logger.Level.predefinedLevelsCache_[name] || null;
+};
+
+
+/**
+ * Gets the highest predefined level <= #value.
+ * @param {number} value Level value.
+ * @return {goog.debug.Logger.Level} The level, or null if none found.
+ */
+goog.debug.Logger.Level.getPredefinedLevelByValue = function(value) {
+  if (!goog.debug.Logger.Level.predefinedLevelsCache_) {
+    goog.debug.Logger.Level.createPredefinedLevelsCache_();
+  }
+
+  if (value in goog.debug.Logger.Level.predefinedLevelsCache_) {
+    return goog.debug.Logger.Level.predefinedLevelsCache_[value];
+  }
+
+  for (var i = 0; i < goog.debug.Logger.Level.PREDEFINED_LEVELS.length; ++i) {
+    var level = goog.debug.Logger.Level.PREDEFINED_LEVELS[i];
+    if (level.value <= value) {
+      return level;
+    }
+  }
+  return null;
+};
+
+
+/**
+ * Find or create a logger for a named subsystem. If a logger has already been
+ * created with the given name it is returned. Otherwise a new logger is
+ * created. If a new logger is created its log level will be configured based
+ * on the LogManager configuration and it will configured to also send logging
+ * output to its parent's handlers. It will be registered in the LogManager
+ * global namespace.
+ *
+ * @param {string} name A name for the logger. This should be a dot-separated
+ * name and should normally be based on the package name or class name of the
+ * subsystem, such as goog.net.BrowserChannel.
+ * @return {!goog.debug.Logger} The named logger.
+ */
+goog.debug.Logger.getLogger = function(name) {
+  return goog.debug.LogManager.getLogger(name);
+};
+
+
+/**
+ * Logs a message to profiling tools, if available.
+ * {@see http://code.google.com/webtoolkit/speedtracer/logging-api.html}
+ * {@see http://msdn.microsoft.com/en-us/library/dd433074(VS.85).aspx}
+ * @param {string} msg The message to log.
+ */
+goog.debug.Logger.logToProfilers = function(msg) {
+  // Using goog.global, as loggers might be used in window-less contexts.
+  if (goog.global['console']) {
+    if (goog.global['console']['timeStamp']) {
+      // Logs a message to Firebug, Web Inspector, SpeedTracer, etc.
+      goog.global['console']['timeStamp'](msg);
+    } else if (goog.global['console']['markTimeline']) {
+      // TODO(user): markTimeline is deprecated. Drop this else clause entirely
+      // after Chrome M14 hits stable.
+      goog.global['console']['markTimeline'](msg);
+    }
+  }
+
+  if (goog.global['msWriteProfilerMark']) {
+    // Logs a message to the Microsoft profiler
+    goog.global['msWriteProfilerMark'](msg);
+  }
+};
+
+
+/**
+ * Gets the name of this logger.
+ * @return {string} The name of this logger.
+ */
+goog.debug.Logger.prototype.getName = function() {
+  return this.name_;
+};
+
+
+/**
+ * Adds a handler to the logger. This doesn't use the event system because
+ * we want to be able to add logging to the event system.
+ * @param {Function} handler Handler function to add.
+ */
+goog.debug.Logger.prototype.addHandler = function(handler) {
+  if (goog.debug.Logger.ENABLE_HIERARCHY) {
+    if (!this.handlers_) {
+      this.handlers_ = [];
+    }
+    this.handlers_.push(handler);
+  } else {
+    goog.asserts.assert(!this.name_,
+        'Cannot call addHandler on a non-root logger when ' +
+        'goog.debug.Logger.ENABLE_HIERARCHY is false.');
+    goog.debug.Logger.rootHandlers_.push(handler);
+  }
+};
+
+
+/**
+ * Removes a handler from the logger. This doesn't use the event system because
+ * we want to be able to add logging to the event system.
+ * @param {Function} handler Handler function to remove.
+ * @return {boolean} Whether the handler was removed.
+ */
+goog.debug.Logger.prototype.removeHandler = function(handler) {
+  var handlers = goog.debug.Logger.ENABLE_HIERARCHY ? this.handlers_ :
+      goog.debug.Logger.rootHandlers_;
+  return !!handlers && goog.array.remove(handlers, handler);
+};
+
+
+/**
+ * Returns the parent of this logger.
+ * @return {goog.debug.Logger} The parent logger or null if this is the root.
+ */
+goog.debug.Logger.prototype.getParent = function() {
+  return this.parent_;
+};
+
+
+/**
+ * Returns the children of this logger as a map of the child name to the logger.
+ * @return {!Object} The map where the keys are the child leaf names and the
+ *     values are the Logger objects.
+ */
+goog.debug.Logger.prototype.getChildren = function() {
+  if (!this.children_) {
+    this.children_ = {};
+  }
+  return this.children_;
+};
+
+
+/**
+ * Set the log level specifying which message levels will be logged by this
+ * logger. Message levels lower than this value will be discarded.
+ * The level value Level.OFF can be used to turn off logging. If the new level
+ * is null, it means that this node should inherit its level from its nearest
+ * ancestor with a specific (non-null) level value.
+ *
+ * @param {goog.debug.Logger.Level} level The new level.
+ */
+goog.debug.Logger.prototype.setLevel = function(level) {
+  if (goog.debug.Logger.ENABLE_HIERARCHY) {
+    this.level_ = level;
+  } else {
+    goog.asserts.assert(!this.name_,
+        'Cannot call setLevel() on a non-root logger when ' +
+        'goog.debug.Logger.ENABLE_HIERARCHY is false.');
+    goog.debug.Logger.rootLevel_ = level;
+  }
+};
+
+
+/**
+ * Gets the log level specifying which message levels will be logged by this
+ * logger. Message levels lower than this value will be discarded.
+ * The level value Level.OFF can be used to turn off logging. If the level
+ * is null, it means that this node should inherit its level from its nearest
+ * ancestor with a specific (non-null) level value.
+ *
+ * @return {goog.debug.Logger.Level} The level.
+ */
+goog.debug.Logger.prototype.getLevel = function() {
+  return this.level_;
+};
+
+
+/**
+ * Returns the effective level of the logger based on its ancestors' levels.
+ * @return {goog.debug.Logger.Level} The level.
+ */
+goog.debug.Logger.prototype.getEffectiveLevel = function() {
+  if (!goog.debug.Logger.ENABLE_HIERARCHY) {
+    return goog.debug.Logger.rootLevel_;
+  }
+  if (this.level_) {
+    return this.level_;
+  }
+  if (this.parent_) {
+    return this.parent_.getEffectiveLevel();
+  }
+  goog.asserts.fail('Root logger has no level set.');
+  return null;
+};
+
+
+/**
+ * Check if a message of the given level would actually be logged by this
+ * logger. This check is based on the Loggers effective level, which may be
+ * inherited from its parent.
+ * @param {goog.debug.Logger.Level} level The level to check.
+ * @return {boolean} Whether the message would be logged.
+ */
+goog.debug.Logger.prototype.isLoggable = function(level) {
+  return level.value >= this.getEffectiveLevel().value;
+};
+
+
+/**
+ * Log a message. If the logger is currently enabled for the
+ * given message level then the given message is forwarded to all the
+ * registered output Handler objects.
+ * @param {goog.debug.Logger.Level} level One of the level identifiers.
+ * @param {string} msg The string message.
+ * @param {Error|Object=} opt_exception An exception associated with the
+ *     message.
+ */
+goog.debug.Logger.prototype.log = function(level, msg, opt_exception) {
+  // java caches the effective level, not sure it's necessary here
+  if (this.isLoggable(level)) {
+    this.doLogRecord_(this.getLogRecord(level, msg, opt_exception));
+  }
+};
+
+
+/**
+ * Creates a new log record and adds the exception (if present) to it.
+ * @param {goog.debug.Logger.Level} level One of the level identifiers.
+ * @param {string} msg The string message.
+ * @param {Error|Object=} opt_exception An exception associated with the
+ *     message.
+ * @return {!goog.debug.LogRecord} A log record.
+ */
+goog.debug.Logger.prototype.getLogRecord = function(level, msg, opt_exception) {
+  if (goog.debug.LogBuffer.isBufferingEnabled()) {
+    var logRecord =
+        goog.debug.LogBuffer.getInstance().addRecord(level, msg, this.name_);
+  } else {
+    logRecord = new goog.debug.LogRecord(level, String(msg), this.name_);
+  }
+  if (opt_exception) {
+    logRecord.setException(opt_exception);
+    logRecord.setExceptionText(
+        goog.debug.exposeException(opt_exception, arguments.callee.caller));
+  }
+  return logRecord;
+};
+
+
+/**
+ * Log a message at the Logger.Level.SHOUT level.
+ * If the logger is currently enabled for the given message level then the
+ * given message is forwarded to all the registered output Handler objects.
+ * @param {string} msg The string message.
+ * @param {Error=} opt_exception An exception associated with the message.
+ */
+goog.debug.Logger.prototype.shout = function(msg, opt_exception) {
+  this.log(goog.debug.Logger.Level.SHOUT, msg, opt_exception);
+};
+
+
+/**
+ * Log a message at the Logger.Level.SEVERE level.
+ * If the logger is currently enabled for the given message level then the
+ * given message is forwarded to all the registered output Handler objects.
+ * @param {string} msg The string message.
+ * @param {Error=} opt_exception An exception associated with the message.
+ */
+goog.debug.Logger.prototype.severe = function(msg, opt_exception) {
+  this.log(goog.debug.Logger.Level.SEVERE, msg, opt_exception);
+};
+
+
+/**
+ * Log a message at the Logger.Level.WARNING level.
+ * If the logger is currently enabled for the given message level then the
+ * given message is forwarded to all the registered output Handler objects.
+ * @param {string} msg The string message.
+ * @param {Error=} opt_exception An exception associated with the message.
+ */
+goog.debug.Logger.prototype.warning = function(msg, opt_exception) {
+  this.log(goog.debug.Logger.Level.WARNING, msg, opt_exception);
+};
+
+
+/**
+ * Log a message at the Logger.Level.INFO level.
+ * If the logger is currently enabled for the given message level then the
+ * given message is forwarded to all the registered output Handler objects.
+ * @param {string} msg The string message.
+ * @param {Error=} opt_exception An exception associated with the message.
+ */
+goog.debug.Logger.prototype.info = function(msg, opt_exception) {
+  this.log(goog.debug.Logger.Level.INFO, msg, opt_exception);
+};
+
+
+/**
+ * Log a message at the Logger.Level.CONFIG level.
+ * If the logger is currently enabled for the given message level then the
+ * given message is forwarded to all the registered output Handler objects.
+ * @param {string} msg The string message.
+ * @param {Error=} opt_exception An exception associated with the message.
+ */
+goog.debug.Logger.prototype.config = function(msg, opt_exception) {
+  this.log(goog.debug.Logger.Level.CONFIG, msg, opt_exception);
+};
+
+
+/**
+ * Log a message at the Logger.Level.FINE level.
+ * If the logger is currently enabled for the given message level then the
+ * given message is forwarded to all the registered output Handler objects.
+ * @param {string} msg The string message.
+ * @param {Error=} opt_exception An exception associated with the message.
+ */
+goog.debug.Logger.prototype.fine = function(msg, opt_exception) {
+  this.log(goog.debug.Logger.Level.FINE, msg, opt_exception);
+};
+
+
+/**
+ * Log a message at the Logger.Level.FINER level.
+ * If the logger is currently enabled for the given message level then the
+ * given message is forwarded to all the registered output Handler objects.
+ * @param {string} msg The string message.
+ * @param {Error=} opt_exception An exception associated with the message.
+ */
+goog.debug.Logger.prototype.finer = function(msg, opt_exception) {
+  this.log(goog.debug.Logger.Level.FINER, msg, opt_exception);
+};
+
+
+/**
+ * Log a message at the Logger.Level.FINEST level.
+ * If the logger is currently enabled for the given message level then the
+ * given message is forwarded to all the registered output Handler objects.
+ * @param {string} msg The string message.
+ * @param {Error=} opt_exception An exception associated with the message.
+ */
+goog.debug.Logger.prototype.finest = function(msg, opt_exception) {
+  this.log(goog.debug.Logger.Level.FINEST, msg, opt_exception);
+};
+
+
+/**
+ * Log a LogRecord. If the logger is currently enabled for the
+ * given message level then the given message is forwarded to all the
+ * registered output Handler objects.
+ * @param {goog.debug.LogRecord} logRecord A log record to log.
+ */
+goog.debug.Logger.prototype.logRecord = function(logRecord) {
+  if (this.isLoggable(logRecord.getLevel())) {
+    this.doLogRecord_(logRecord);
+  }
+};
+
+
+/**
+ * Log a LogRecord.
+ * @param {goog.debug.LogRecord} logRecord A log record to log.
+ * @private
+ */
+goog.debug.Logger.prototype.doLogRecord_ = function(logRecord) {
+  goog.debug.Logger.logToProfilers('log:' + logRecord.getMessage());
+  if (goog.debug.Logger.ENABLE_HIERARCHY) {
+    var target = this;
+    while (target) {
+      target.callPublish_(logRecord);
+      target = target.getParent();
+    }
+  } else {
+    for (var i = 0, handler; handler = goog.debug.Logger.rootHandlers_[i++]; ) {
+      handler(logRecord);
+    }
+  }
+};
+
+
+/**
+ * Calls the handlers for publish.
+ * @param {goog.debug.LogRecord} logRecord The log record to publish.
+ * @private
+ */
+goog.debug.Logger.prototype.callPublish_ = function(logRecord) {
+  if (this.handlers_) {
+    for (var i = 0, handler; handler = this.handlers_[i]; i++) {
+      handler(logRecord);
+    }
+  }
+};
+
+
+/**
+ * Sets the parent of this logger. This is used for setting up the logger tree.
+ * @param {goog.debug.Logger} parent The parent logger.
+ * @private
+ */
+goog.debug.Logger.prototype.setParent_ = function(parent) {
+  this.parent_ = parent;
+};
+
+
+/**
+ * Adds a child to this logger. This is used for setting up the logger tree.
+ * @param {string} name The leaf name of the child.
+ * @param {goog.debug.Logger} logger The child logger.
+ * @private
+ */
+goog.debug.Logger.prototype.addChild_ = function(name, logger) {
+  this.getChildren()[name] = logger;
+};
+
+
+/**
+ * There is a single global LogManager object that is used to maintain a set of
+ * shared state about Loggers and log services. This is loosely based on the
+ * java class java.util.logging.LogManager.
+ */
+goog.debug.LogManager = {};
+
+
+/**
+ * Map of logger names to logger objects
+ *
+ * @type {!Object}
+ * @private
+ */
+goog.debug.LogManager.loggers_ = {};
+
+
+/**
+ * The root logger which is the root of the logger tree.
+ * @type {goog.debug.Logger}
+ * @private
+ */
+goog.debug.LogManager.rootLogger_ = null;
+
+
+/**
+ * Initialize the LogManager if not already initialized
+ */
+goog.debug.LogManager.initialize = function() {
+  if (!goog.debug.LogManager.rootLogger_) {
+    goog.debug.LogManager.rootLogger_ = new goog.debug.Logger('');
+    goog.debug.LogManager.loggers_[''] = goog.debug.LogManager.rootLogger_;
+    goog.debug.LogManager.rootLogger_.setLevel(goog.debug.Logger.Level.CONFIG);
+  }
+};
+
+
+/**
+ * Returns all the loggers
+ * @return {!Object} Map of logger names to logger objects.
+ */
+goog.debug.LogManager.getLoggers = function() {
+  return goog.debug.LogManager.loggers_;
+};
+
+
+/**
+ * Returns the root of the logger tree namespace, the logger with the empty
+ * string as its name
+ *
+ * @return {!goog.debug.Logger} The root logger.
+ */
+goog.debug.LogManager.getRoot = function() {
+  goog.debug.LogManager.initialize();
+  return /** @type {!goog.debug.Logger} */ (goog.debug.LogManager.rootLogger_);
+};
+
+
+/**
+ * Method to find a named logger.
+ *
+ * @param {string} name A name for the logger. This should be a dot-separated
+ * name and should normally be based on the package name or class name of the
+ * subsystem, such as goog.net.BrowserChannel.
+ * @return {!goog.debug.Logger} The named logger.
+ */
+goog.debug.LogManager.getLogger = function(name) {
+  goog.debug.LogManager.initialize();
+  var ret = goog.debug.LogManager.loggers_[name];
+  return ret || goog.debug.LogManager.createLogger_(name);
+};
+
+
+/**
+ * Creates a function that can be passed to goog.debug.catchErrors. The function
+ * will log all reported errors using the given logger.
+ * @param {goog.debug.Logger=} opt_logger The logger to log the errors to.
+ *     Defaults to the root logger.
+ * @return {function(Object)} The created function.
+ */
+goog.debug.LogManager.createFunctionForCatchErrors = function(opt_logger) {
+  return function(info) {
+    var logger = opt_logger || goog.debug.LogManager.getRoot();
+    logger.severe('Error: ' + info.message + ' (' + info.fileName +
+                  ' @ Line: ' + info.line + ')');
+  };
+};
+
+
+/**
+ * Creates the named logger. Will also create the parents of the named logger
+ * if they don't yet exist.
+ * @param {string} name The name of the logger.
+ * @return {!goog.debug.Logger} The named logger.
+ * @private
+ */
+goog.debug.LogManager.createLogger_ = function(name) {
+  // find parent logger
+  var logger = new goog.debug.Logger(name);
+  if (goog.debug.Logger.ENABLE_HIERARCHY) {
+    var lastDotIndex = name.lastIndexOf('.');
+    var parentName = name.substr(0, lastDotIndex);
+    var leafName = name.substr(lastDotIndex + 1);
+    var parentLogger = goog.debug.LogManager.getLogger(parentName);
+
+    // tell the parent about the child and the child about the parent
+    parentLogger.addChild_(leafName, logger);
+    logger.setParent_(parentLogger);
+  }
+
+  goog.debug.LogManager.loggers_[name] = logger;
+  return logger;
+};
+// Copyright 2007 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Definition the goog.debug.RelativeTimeProvider class.
+ *
+ */
+
+goog.provide('goog.debug.RelativeTimeProvider');
+
+
+
+/**
+ * A simple object to keep track of a timestamp considered the start of
+ * something. The main use is for the logger system to maintain a start time
+ * that is occasionally reset. For example, in Gmail, we reset this relative
+ * time at the start of a user action so that timings are offset from the
+ * beginning of the action. This class also provides a singleton as the default
+ * behavior for most use cases is to share the same start time.
+ *
+ * @constructor
+ */
+goog.debug.RelativeTimeProvider = function() {
+  /**
+   * The start time.
+   * @type {number}
+   * @private
+   */
+  this.relativeTimeStart_ = goog.now();
+};
+
+
+/**
+ * Default instance.
+ * @type {goog.debug.RelativeTimeProvider}
+ * @private
+ */
+goog.debug.RelativeTimeProvider.defaultInstance_ =
+    new goog.debug.RelativeTimeProvider();
+
+
+/**
+ * Sets the start time to the specified time.
+ * @param {number} timeStamp The start time.
+ */
+goog.debug.RelativeTimeProvider.prototype.set = function(timeStamp) {
+  this.relativeTimeStart_ = timeStamp;
+};
+
+
+/**
+ * Resets the start time to now.
+ */
+goog.debug.RelativeTimeProvider.prototype.reset = function() {
+  this.set(goog.now());
+};
+
+
+/**
+ * @return {number} The start time.
+ */
+goog.debug.RelativeTimeProvider.prototype.get = function() {
+  return this.relativeTimeStart_;
+};
+
+
+/**
+ * @return {goog.debug.RelativeTimeProvider} The default instance.
+ */
+goog.debug.RelativeTimeProvider.getDefaultInstance = function() {
+  return goog.debug.RelativeTimeProvider.defaultInstance_;
+};
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Definition of various formatters for logging. Please minimize
+ * dependencies this file has on other closure classes as any dependency it
+ * takes won't be able to use the logging infrastructure.
+ *
+ */
+
+goog.provide('goog.debug.Formatter');
+goog.provide('goog.debug.HtmlFormatter');
+goog.provide('goog.debug.TextFormatter');
+
+goog.require('goog.debug.RelativeTimeProvider');
+goog.require('goog.string');
+
+
+
+/**
+ * Base class for Formatters. A Formatter is used to format a LogRecord into
+ * something that can be displayed to the user.
+ *
+ * @param {string=} opt_prefix The prefix to place before text records.
+ * @constructor
+ */
+goog.debug.Formatter = function(opt_prefix) {
+  this.prefix_ = opt_prefix || '';
+
+  /**
+   * A provider that returns the relative start time.
+   * @type {goog.debug.RelativeTimeProvider}
+   * @private
+   */
+  this.startTimeProvider_ =
+      goog.debug.RelativeTimeProvider.getDefaultInstance();
+};
+
+
+/**
+ * Whether to show absolute time in the DebugWindow
+ * @type {boolean}
+ */
+goog.debug.Formatter.prototype.showAbsoluteTime = true;
+
+
+/**
+ * Whether to show relative time in the DebugWindow
+ * @type {boolean}
+ */
+goog.debug.Formatter.prototype.showRelativeTime = true;
+
+
+/**
+ * Whether to show the logger name in the DebugWindow
+ * @type {boolean}
+ */
+goog.debug.Formatter.prototype.showLoggerName = true;
+
+
+/**
+ * Whether to show the logger exception text
+ * @type {boolean}
+ */
+goog.debug.Formatter.prototype.showExceptionText = false;
+
+
+/**
+ * Whether to show the severity level
+ * @type {boolean}
+ */
+goog.debug.Formatter.prototype.showSeverityLevel = false;
+
+
+/**
+ * Formats a record
+ * @param {goog.debug.LogRecord} logRecord the logRecord to format.
+ * @return {string} The formatted string.
+ */
+goog.debug.Formatter.prototype.formatRecord = goog.abstractMethod;
+
+
+/**
+ * Sets the start time provider. By default, this is the default instance
+ * but can be changed.
+ * @param {goog.debug.RelativeTimeProvider} provider The provider to use.
+ */
+goog.debug.Formatter.prototype.setStartTimeProvider = function(provider) {
+  this.startTimeProvider_ = provider;
+};
+
+
+/**
+ * Returns the start time provider. By default, this is the default instance
+ * but can be changed.
+ * @return {goog.debug.RelativeTimeProvider} The start time provider.
+ */
+goog.debug.Formatter.prototype.getStartTimeProvider = function() {
+  return this.startTimeProvider_;
+};
+
+
+/**
+ * Resets the start relative time.
+ */
+goog.debug.Formatter.prototype.resetRelativeTimeStart = function() {
+  this.startTimeProvider_.reset();
+};
+
+
+/**
+ * Returns a string for the time/date of the LogRecord.
+ * @param {goog.debug.LogRecord} logRecord The record to get a time stamp for.
+ * @return {string} A string representation of the time/date of the LogRecord.
+ * @private
+ */
+goog.debug.Formatter.getDateTimeStamp_ = function(logRecord) {
+  var time = new Date(logRecord.getMillis());
+  return goog.debug.Formatter.getTwoDigitString_((time.getFullYear() - 2000)) +
+         goog.debug.Formatter.getTwoDigitString_((time.getMonth() + 1)) +
+         goog.debug.Formatter.getTwoDigitString_(time.getDate()) + ' ' +
+         goog.debug.Formatter.getTwoDigitString_(time.getHours()) + ':' +
+         goog.debug.Formatter.getTwoDigitString_(time.getMinutes()) + ':' +
+         goog.debug.Formatter.getTwoDigitString_(time.getSeconds()) + '.' +
+         goog.debug.Formatter.getTwoDigitString_(
+             Math.floor(time.getMilliseconds() / 10));
+};
+
+
+/**
+ * Returns the number as a two-digit string, meaning it prepends a 0 if the
+ * number if less than 10.
+ * @param {number} n The number to format.
+ * @return {string} A two-digit string representation of {@code n}.
+ * @private
+ */
+goog.debug.Formatter.getTwoDigitString_ = function(n) {
+  if (n < 10) {
+    return '0' + n;
+  }
+  return String(n);
+};
+
+
+/**
+ * Returns a string for the number of seconds relative to the start time.
+ * Prepads with spaces so that anything less than 1000 seconds takes up the
+ * same number of characters for better formatting.
+ * @param {goog.debug.LogRecord} logRecord The log to compare time to.
+ * @param {number} relativeTimeStart The start time to compare to.
+ * @return {string} The number of seconds of the LogRecord relative to the
+ *     start time.
+ * @private
+ */
+goog.debug.Formatter.getRelativeTime_ = function(logRecord,
+                                                 relativeTimeStart) {
+  var ms = logRecord.getMillis() - relativeTimeStart;
+  var sec = ms / 1000;
+  var str = sec.toFixed(3);
+
+  var spacesToPrepend = 0;
+  if (sec < 1) {
+    spacesToPrepend = 2;
+  } else {
+    while (sec < 100) {
+      spacesToPrepend++;
+      sec *= 10;
+    }
+  }
+  while (spacesToPrepend-- > 0) {
+    str = ' ' + str;
+  }
+  return str;
+};
+
+
+
+/**
+ * Formatter that returns formatted html. See formatRecord for the classes
+ * it uses for various types of formatted output.
+ *
+ * @param {string=} opt_prefix The prefix to place before text records.
+ * @constructor
+ * @extends {goog.debug.Formatter}
+ */
+goog.debug.HtmlFormatter = function(opt_prefix) {
+  goog.debug.Formatter.call(this, opt_prefix);
+};
+goog.inherits(goog.debug.HtmlFormatter, goog.debug.Formatter);
+
+
+/**
+ * Whether to show the logger exception text
+ * @type {boolean}
+ */
+goog.debug.HtmlFormatter.prototype.showExceptionText = true;
+
+
+/**
+ * Formats a record
+ * @param {goog.debug.LogRecord} logRecord the logRecord to format.
+ * @return {string} The formatted string as html.
+ */
+goog.debug.HtmlFormatter.prototype.formatRecord = function(logRecord) {
+  var className;
+  switch (logRecord.getLevel().value) {
+    case goog.debug.Logger.Level.SHOUT.value:
+      className = 'dbg-sh';
+      break;
+    case goog.debug.Logger.Level.SEVERE.value:
+      className = 'dbg-sev';
+      break;
+    case goog.debug.Logger.Level.WARNING.value:
+      className = 'dbg-w';
+      break;
+    case goog.debug.Logger.Level.INFO.value:
+      className = 'dbg-i';
+      break;
+    case goog.debug.Logger.Level.FINE.value:
+    default:
+      className = 'dbg-f';
+      break;
+  }
+
+  // Build message html
+  var sb = [];
+  sb.push(this.prefix_, ' ');
+  if (this.showAbsoluteTime) {
+    sb.push('[', goog.debug.Formatter.getDateTimeStamp_(logRecord), '] ');
+  }
+  if (this.showRelativeTime) {
+    sb.push('[',
+        goog.string.whitespaceEscape(
+            goog.debug.Formatter.getRelativeTime_(logRecord,
+                this.startTimeProvider_.get())),
+        's] ');
+  }
+
+  if (this.showLoggerName) {
+    sb.push('[', goog.string.htmlEscape(logRecord.getLoggerName()), '] ');
+  }
+  sb.push('<span class="', className, '">',
+      goog.string.newLineToBr(goog.string.whitespaceEscape(
+          goog.string.htmlEscape(logRecord.getMessage()))));
+
+  if (this.showExceptionText && logRecord.getException()) {
+    sb.push('<br>',
+        goog.string.newLineToBr(goog.string.whitespaceEscape(
+            logRecord.getExceptionText() || '')));
+  }
+  sb.push('</span><br>');
+
+  // If the logger is enabled, open window and write html message to log
+  // otherwise save it
+  return sb.join('');
+};
+
+
+
+/**
+ * Formatter that returns formatted plain text
+ *
+ * @param {string=} opt_prefix The prefix to place before text records.
+ * @constructor
+ * @extends {goog.debug.Formatter}
+ */
+goog.debug.TextFormatter = function(opt_prefix) {
+  goog.debug.Formatter.call(this, opt_prefix);
+};
+goog.inherits(goog.debug.TextFormatter, goog.debug.Formatter);
+
+
+/**
+ * Formats a record as text
+ * @param {goog.debug.LogRecord} logRecord the logRecord to format.
+ * @return {string} The formatted string.
+ */
+goog.debug.TextFormatter.prototype.formatRecord = function(logRecord) {
+  // Build message html
+  var sb = [];
+  sb.push(this.prefix_, ' ');
+  if (this.showAbsoluteTime) {
+    sb.push('[', goog.debug.Formatter.getDateTimeStamp_(logRecord), '] ');
+  }
+  if (this.showRelativeTime) {
+    sb.push('[', goog.debug.Formatter.getRelativeTime_(logRecord,
+        this.startTimeProvider_.get()), 's] ');
+  }
+
+  if (this.showLoggerName) {
+    sb.push('[', logRecord.getLoggerName(), '] ');
+  }
+  if (this.showSeverityLevel) {
+    sb.push('[', logRecord.getLevel().name, '] ');
+  }
+  sb.push(logRecord.getMessage(), '\n');
+  if (this.showExceptionText && logRecord.getException()) {
+    sb.push(logRecord.getExceptionText(), '\n');
+  }
+  // If the logger is enabled, open window and write html message to log
+  // otherwise save it
+  return sb.join('');
+};
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+/**
+ * @fileoverview Datastructure: Circular Buffer.
+ *
+ * Implements a buffer with a maximum size. New entries override the oldest
+ * entries when the maximum size has been reached.
+ *
+ */
+
+
+goog.provide('goog.structs.CircularBuffer');
+
+
+
+/**
+ * Class for CircularBuffer.
+ * @param {number=} opt_maxSize The maximum size of the buffer.
+ * @constructor
+ */
+goog.structs.CircularBuffer = function(opt_maxSize) {
+  /**
+   * Maximum size of the the circular array structure.
+   * @type {number}
+   * @private
+   */
+  this.maxSize_ = opt_maxSize || 100;
+
+  /**
+   * Underlying array for the CircularBuffer.
+   * @type {Array}
+   * @private
+   */
+  this.buff_ = [];
+};
+
+
+/**
+ * Index of the next element in the circular array structure.
+ * @type {number}
+ * @private
+ */
+goog.structs.CircularBuffer.prototype.nextPtr_ = 0;
+
+
+/**
+ * Adds an item to the buffer. May remove the oldest item if the buffer is at
+ * max size.
+ * @param {*} item The item to add.
+ */
+goog.structs.CircularBuffer.prototype.add = function(item) {
+  this.buff_[this.nextPtr_] = item;
+  this.nextPtr_ = (this.nextPtr_ + 1) % this.maxSize_;
+};
+
+
+/**
+ * Returns the item at the specified index.
+ * @param {number} index The index of the item. The index of an item can change
+ *     after calls to {@code add()} if the buffer is at maximum size.
+ * @return {*} The item at the specified index.
+ */
+goog.structs.CircularBuffer.prototype.get = function(index) {
+  index = this.normalizeIndex_(index);
+  return this.buff_[index];
+};
+
+
+/**
+ * Sets the item at the specified index.
+ * @param {number} index The index of the item. The index of an item can change
+ *     after calls to {@code add()} if the buffer is at maximum size.
+ * @param {*} item The item to add.
+ */
+goog.structs.CircularBuffer.prototype.set = function(index, item) {
+  index = this.normalizeIndex_(index);
+  this.buff_[index] = item;
+};
+
+
+/**
+ * Returns the current number of items in the buffer.
+ * @return {number} The current number of items in the buffer.
+ */
+goog.structs.CircularBuffer.prototype.getCount = function() {
+  return this.buff_.length;
+};
+
+
+/**
+ * @return {boolean} Whether the buffer is empty.
+ */
+goog.structs.CircularBuffer.prototype.isEmpty = function() {
+  return this.buff_.length == 0;
+};
+
+
+/**
+ * Empties the current buffer.
+ */
+goog.structs.CircularBuffer.prototype.clear = function() {
+  this.buff_.length = 0;
+  this.nextPtr_ = 0;
+};
+
+
+/**
+ * @return {Array} The values in the buffer.
+ */
+goog.structs.CircularBuffer.prototype.getValues = function() {
+  // getNewestValues returns all the values if the maxCount parameter is the
+  // count
+  return this.getNewestValues(this.getCount());
+};
+
+
+/**
+ * Returns the newest values in the buffer up to {@code count}.
+ * @param {number} maxCount The maximum number of values to get. Should be a
+ *     positive number.
+ * @return {Array} The newest values in the buffer up to {@code count}.
+ */
+goog.structs.CircularBuffer.prototype.getNewestValues = function(maxCount) {
+  var l = this.getCount();
+  var start = this.getCount() - maxCount;
+  var rv = [];
+  for (var i = start; i < l; i++) {
+    rv[i] = this.get(i);
+  }
+  return rv;
+};
+
+
+/**
+ * @return {Array} The indexes in the buffer.
+ */
+goog.structs.CircularBuffer.prototype.getKeys = function() {
+  var rv = [];
+  var l = this.getCount();
+  for (var i = 0; i < l; i++) {
+    rv[i] = i;
+  }
+  return rv;
+};
+
+
+/**
+ * Whether the buffer contains the key/index.
+ * @param {number} key The key/index to check for.
+ * @return {boolean} Whether the buffer contains the key/index.
+ */
+goog.structs.CircularBuffer.prototype.containsKey = function(key) {
+  return key < this.getCount();
+};
+
+
+/**
+ * Whether the buffer contains the given value.
+ * @param {*} value The value to check for.
+ * @return {boolean} Whether the buffer contains the given value.
+ */
+goog.structs.CircularBuffer.prototype.containsValue = function(value) {
+  var l = this.getCount();
+  for (var i = 0; i < l; i++) {
+    if (this.get(i) == value) {
+      return true;
+    }
+  }
+  return false;
+};
+
+
+/**
+ * Returns the last item inserted into the buffer.
+ * @return {*} The last item inserted into the buffer, or null if the buffer is
+ *     empty.
+ */
+goog.structs.CircularBuffer.prototype.getLast = function() {
+  if (this.getCount() == 0) {
+    return null;
+  }
+  return this.get(this.getCount() - 1);
+};
+
+
+/**
+ * Helper function to convert an index in the number space of oldest to
+ * newest items in the array to the position that the element will be at in the
+ * underlying array.
+ * @param {number} index The index of the item in a list ordered from oldest to
+ *     newest.
+ * @return {number} The index of the item in the CircularBuffer's underlying
+ *     array.
+ * @private
+ */
+goog.structs.CircularBuffer.prototype.normalizeIndex_ = function(index) {
+  if (index >= this.buff_.length) {
+    throw Error('Out of bounds exception');
+  }
+
+  if (this.buff_.length < this.maxSize_) {
+    return index;
+  }
+
+  return (this.nextPtr_ + Number(index)) % this.maxSize_;
+};
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Definition of the DebugWindow class. Please minimize
+ * dependencies this file has on other closure classes as any dependency it
+ * takes won't be able to use the logging infrastructure.
+ *
+ */
+
+goog.provide('goog.debug.DebugWindow');
+
+goog.require('goog.debug.HtmlFormatter');
+goog.require('goog.debug.LogManager');
+goog.require('goog.structs.CircularBuffer');
+goog.require('goog.userAgent');
+
+
+
+/**
+ * Provides a debug DebugWindow that is bound to the goog.debug.Logger.
+ * It handles log messages and writes them to the DebugWindow. This doesn't
+ * provide a lot of functionality that the old Gmail logging infrastructure
+ * provided like saving debug logs for exporting to the server. Now that we
+ * have an event-based logging infrastructure, we can encapsulate that
+ * functionality in a separate class.
+ *
+ * @constructor
+ * @param {string=} opt_identifier Identifier for this logging class.
+ * @param {string=} opt_prefix Prefix prepended to messages.
+ */
+goog.debug.DebugWindow = function(opt_identifier, opt_prefix) {
+  /**
+   * Identifier for this logging class
+   * @type {string}
+   * @protected
+   * @suppress {underscore}
+   */
+  this.identifier_ = opt_identifier || '';
+
+  /**
+   * Optional prefix to be prepended to error strings
+   * @type {string}
+   * @private
+   */
+  this.prefix_ = opt_prefix || '';
+
+  /**
+   * Array used to buffer log output
+   * @type {Array}
+   * @protected
+   * @suppress {underscore}
+   */
+  this.outputBuffer_ = [];
+
+  /**
+   * Buffer for saving the last 1000 messages
+   * @type {goog.structs.CircularBuffer}
+   * @private
+   */
+  this.savedMessages_ =
+      new goog.structs.CircularBuffer(goog.debug.DebugWindow.MAX_SAVED);
+
+  /**
+   * Save the publish handler so it can be removed
+   * @type {Function}
+   * @private
+   */
+  this.publishHandler_ = goog.bind(this.addLogRecord, this);
+
+  /**
+   * Formatter for formatted output
+   * @type {goog.debug.Formatter}
+   * @private
+   */
+  this.formatter_ = new goog.debug.HtmlFormatter(this.prefix_);
+
+  /**
+   * Loggers that we shouldn't output
+   * @type {Object}
+   * @private
+   */
+  this.filteredLoggers_ = {};
+
+  // enable by default
+  this.setCapturing(true);
+
+  /**
+   * Whether we are currently enabled. When the DebugWindow is enabled, it tries
+   * to keep its window open. When it's disabled, it can still be capturing log
+   * output if, but it won't try to write them to the DebugWindow window until
+   * it's enabled.
+   * @type {boolean}
+   * @private
+   */
+  this.enabled_ = goog.debug.DebugWindow.isEnabled(this.identifier_);
+
+  // timer to save the DebugWindow's window position in a cookie
+  goog.global.setInterval(goog.bind(this.saveWindowPositionSize_, this), 7500);
+};
+
+
+/**
+ * Max number of messages to be saved
+ * @type {number}
+ */
+goog.debug.DebugWindow.MAX_SAVED = 500;
+
+
+/**
+ * How long to keep the cookies for in milliseconds
+ * @type {number}
+ */
+goog.debug.DebugWindow.COOKIE_TIME = 30 * 24 * 60 * 60 * 1000; // 30-days
+
+
+/**
+ * HTML string printed when the debug window opens
+ * @type {string}
+ * @protected
+ */
+goog.debug.DebugWindow.prototype.welcomeMessage = 'LOGGING';
+
+
+/**
+ * Whether to force enable the window on a severe log.
+ * @type {boolean}
+ * @private
+ */
+goog.debug.DebugWindow.prototype.enableOnSevere_ = false;
+
+
+/**
+ * Reference to debug window
+ * @type {Window}
+ * @protected
+ * @suppress {underscore}
+ */
+goog.debug.DebugWindow.prototype.win_ = null;
+
+
+/**
+ * In the process of opening the window
+ * @type {boolean}
+ * @private
+ */
+goog.debug.DebugWindow.prototype.winOpening_ = false;
+
+
+/**
+ * Whether we are currently capturing logger output.
+ *
+ * @type {boolean}
+ * @private
+ */
+goog.debug.DebugWindow.prototype.isCapturing_ = false;
+
+
+/**
+ * Whether we already showed an alert that the DebugWindow was blocked.
+ * @type {boolean}
+ * @private
+ */
+goog.debug.DebugWindow.showedBlockedAlert_ = false;
+
+
+/**
+ * Reference to timeout used to buffer the output stream.
+ * @type {?number}
+ * @private
+ */
+goog.debug.DebugWindow.prototype.bufferTimeout_ = null;
+
+
+/**
+ * Timestamp for the last time the log was written to.
+ * @type {number}
+ * @protected
+ * @suppress {underscore}
+ */
+goog.debug.DebugWindow.prototype.lastCall_ = goog.now();
+
+
+/**
+ * Sets the welcome message shown when the window is first opened or reset.
+ *
+ * @param {string} msg An HTML string.
+ */
+goog.debug.DebugWindow.prototype.setWelcomeMessage = function(msg) {
+  this.welcomeMessage = msg;
+};
+
+
+/**
+ * Initializes the debug window.
+ */
+goog.debug.DebugWindow.prototype.init = function() {
+  if (this.enabled_) {
+    this.openWindow_();
+  }
+};
+
+
+/**
+ * Whether the DebugWindow is enabled. When the DebugWindow is enabled, it
+ * tries to keep its window open and logs all messages to the window.  When the
+ * DebugWindow is disabled, it stops logging messages to its window.
+ *
+ * @return {boolean} Whether the DebugWindow is enabled.
+ */
+goog.debug.DebugWindow.prototype.isEnabled = function() {
+  return this.enabled_;
+};
+
+
+/**
+ * Sets whether the DebugWindow is enabled. When the DebugWindow is enabled, it
+ * tries to keep its window open and log all messages to the window. When the
+ * DebugWindow is disabled, it stops logging messages to its window. The
+ * DebugWindow also saves this state to a cookie so that it's persisted across
+ * application refreshes.
+ * @param {boolean} enable Whether the DebugWindow is enabled.
+ */
+goog.debug.DebugWindow.prototype.setEnabled = function(enable) {
+  this.enabled_ = enable;
+
+  if (this.enabled_) {
+    this.openWindow_();
+
+    if (this.win_) {
+      this.writeInitialDocument_();
+    }
+  }
+
+  this.setCookie_('enabled', enable ? '1' : '0');
+};
+
+
+/**
+ * Sets whether the debug window should be force enabled when a severe log is
+ * encountered.
+ * @param {boolean} enableOnSevere Whether to enable on severe logs..
+ */
+goog.debug.DebugWindow.prototype.setForceEnableOnSevere =
+    function(enableOnSevere) {
+  this.enableOnSevere_ = enableOnSevere;
+};
+
+
+/**
+ * Whether we are currently capturing logger output.
+ * @return {boolean} whether we are currently capturing logger output.
+ */
+goog.debug.DebugWindow.prototype.isCapturing = function() {
+  return this.isCapturing_;
+};
+
+
+/**
+ * Sets whether we are currently capturing logger output.
+ * @param {boolean} capturing Whether to capture logger output.
+ */
+goog.debug.DebugWindow.prototype.setCapturing = function(capturing) {
+  if (capturing == this.isCapturing_) {
+    return;
+  }
+  this.isCapturing_ = capturing;
+
+  // attach or detach handler from the root logger
+  var rootLogger = goog.debug.LogManager.getRoot();
+  if (capturing) {
+    rootLogger.addHandler(this.publishHandler_);
+  } else {
+    rootLogger.removeHandler(this.publishHandler_);
+  }
+};
+
+
+/**
+ * Gets the formatter for outputting to the debug window. The default formatter
+ * is an instance of goog.debug.HtmlFormatter
+ * @return {goog.debug.Formatter} The formatter in use.
+ */
+goog.debug.DebugWindow.prototype.getFormatter = function() {
+  return this.formatter_;
+};
+
+
+/**
+ * Sets the formatter for outputting to the debug window.
+ * @param {goog.debug.Formatter} formatter The formatter to use.
+ */
+goog.debug.DebugWindow.prototype.setFormatter = function(formatter) {
+  this.formatter_ = formatter;
+};
+
+
+/**
+ * Adds a separator to the debug window.
+ */
+goog.debug.DebugWindow.prototype.addSeparator = function() {
+  this.write_('<hr>');
+};
+
+
+/**
+ * @return {boolean} Whether there is an active window.
+ */
+goog.debug.DebugWindow.prototype.hasActiveWindow = function() {
+  return !!this.win_ && !this.win_.closed;
+};
+
+
+/**
+ * Clears the contents of the debug window
+ * @protected
+ * @suppress {underscore}
+ */
+goog.debug.DebugWindow.prototype.clear_ = function() {
+  this.savedMessages_.clear();
+  if (this.hasActiveWindow()) {
+    this.writeInitialDocument_();
+  }
+};
+
+
+/**
+ * Adds a log record.
+ * @param {goog.debug.LogRecord} logRecord the LogRecord.
+ */
+goog.debug.DebugWindow.prototype.addLogRecord = function(logRecord) {
+  if (this.filteredLoggers_[logRecord.getLoggerName()]) {
+    return;
+  }
+  var html = this.formatter_.formatRecord(logRecord);
+  this.write_(html);
+  if (this.enableOnSevere_ &&
+      logRecord.getLevel().value >= goog.debug.Logger.Level.SEVERE.value) {
+    this.setEnabled(true);
+  }
+};
+
+
+/**
+ * Writes a message to the log, possibly opening up the window if it's enabled,
+ * or saving it if it's disabled.
+ * @param {string} html The HTML to write.
+ * @private
+ */
+goog.debug.DebugWindow.prototype.write_ = function(html) {
+  // If the logger is enabled, open window and write html message to log
+  // otherwise save it
+  if (this.enabled_) {
+    this.openWindow_();
+    this.savedMessages_.add(html);
+    this.writeToLog_(html);
+  } else {
+    this.savedMessages_.add(html);
+  }
+};
+
+
+/**
+ * Write to the buffer.  If a message hasn't been sent for more than 750ms just
+ * write, otherwise delay for a minimum of 250ms.
+ * @param {string} html HTML to post to the log.
+ * @private
+ */
+goog.debug.DebugWindow.prototype.writeToLog_ = function(html) {
+  this.outputBuffer_.push(html);
+  goog.global.clearTimeout(this.bufferTimeout_);
+
+  if (goog.now() - this.lastCall_ > 750) {
+    this.writeBufferToLog_();
+  } else {
+    this.bufferTimeout_ =
+        goog.global.setTimeout(goog.bind(this.writeBufferToLog_, this), 250);
+  }
+};
+
+
+/**
+ * Write to the log and maybe scroll into view
+ * @protected
+ * @suppress {underscore}
+ */
+goog.debug.DebugWindow.prototype.writeBufferToLog_ = function() {
+  this.lastCall_ = goog.now();
+  if (this.hasActiveWindow()) {
+    var body = this.win_.document.body;
+    var scroll = body &&
+        body.scrollHeight - (body.scrollTop + body.clientHeight) <= 100;
+
+    this.win_.document.write(this.outputBuffer_.join(''));
+    this.outputBuffer_.length = 0;
+
+    if (scroll) {
+      this.win_.scrollTo(0, 1000000);
+    }
+  }
+};
+
+
+/**
+ * Writes all saved messages to the DebugWindow.
+ * @protected
+ * @suppress {underscore}
+ */
+goog.debug.DebugWindow.prototype.writeSavedMessages_ = function() {
+  var messages = this.savedMessages_.getValues();
+  for (var i = 0; i < messages.length; i++) {
+    this.writeToLog_(messages[i]);
+  }
+};
+
+
+/**
+ * Opens the debug window if it is not already referenced
+ * @private
+ */
+goog.debug.DebugWindow.prototype.openWindow_ = function() {
+  if (this.hasActiveWindow() || this.winOpening_) {
+    return;
+  }
+
+  var winpos = this.getCookie_('dbg', '0,0,800,500').split(',');
+  var x = Number(winpos[0]);
+  var y = Number(winpos[1]);
+  var w = Number(winpos[2]);
+  var h = Number(winpos[3]);
+
+  this.winOpening_ = true;
+  this.win_ = window.open('', this.getWindowName_(), 'width=' + w +
+                          ',height=' + h + ',toolbar=no,resizable=yes,' +
+                          'scrollbars=yes,left=' + x + ',top=' + y +
+                          ',status=no,screenx=' + x + ',screeny=' + y);
+
+  if (!this.win_) {
+    if (!this.showedBlockedAlert_) {
+      // only show this once
+      alert('Logger popup was blocked');
+      this.showedBlockedAlert_ = true;
+    }
+  }
+
+  this.winOpening_ = false;
+
+  if (this.win_) {
+    this.writeInitialDocument_();
+  }
+};
+
+
+/**
+ * Gets a valid window name for the debug window. Replaces invalid characters in
+ * IE.
+ * @return {string} Valid window name.
+ * @private
+ */
+goog.debug.DebugWindow.prototype.getWindowName_ = function() {
+  return goog.userAgent.IE ?
+      this.identifier_.replace(/[\s\-\.\,]/g, '_') : this.identifier_;
+};
+
+
+/**
+ * @return {string} The style rule text, for inclusion in the initial HTML.
+ */
+goog.debug.DebugWindow.prototype.getStyleRules = function() {
+  return '*{font:normal 14px monospace;}' +
+         '.dbg-sev{color:#F00}' +
+         '.dbg-w{color:#E92}' +
+         '.dbg-sh{background-color:#fd4;font-weight:bold;color:#000}' +
+         '.dbg-i{color:#666}' +
+         '.dbg-f{color:#999}' +
+         '.dbg-ev{color:#0A0}' +
+         '.dbg-m{color:#990}';
+};
+
+
+/**
+ * Writes the initial HTML of the debug window
+ * @protected
+ * @suppress {underscore}
+ */
+goog.debug.DebugWindow.prototype.writeInitialDocument_ = function() {
+  if (this.hasActiveWindow()) {
+    return;
+  }
+
+  this.win_.document.open();
+
+  var html = '<style>' + this.getStyleRules() + '</style>' +
+             '<hr><div class="dbg-ev" style="text-align:center">' +
+             this.welcomeMessage + '<br><small>Logger: ' +
+             this.identifier_ + '</small></div><hr>';
+
+  this.writeToLog_(html);
+  this.writeSavedMessages_();
+};
+
+
+/**
+ * Save persistent data (using cookies) for 1 month (cookie specific to this
+ * logger object)
+ * @param {string} key Data name.
+ * @param {string} value Data value.
+ * @private
+ */
+goog.debug.DebugWindow.prototype.setCookie_ = function(key, value) {
+  key += this.identifier_;
+  document.cookie = key + '=' + encodeURIComponent(value) +
+      ';path=/;expires=' +
+      (new Date(goog.now() + goog.debug.DebugWindow.COOKIE_TIME)).toUTCString();
+};
+
+
+/**
+ * Retrieve data (using cookies).
+ * @param {string} key Data name.
+ * @param {string=} opt_default Optional default value if cookie doesn't exist.
+ * @return {string} Cookie value.
+ * @private
+ */
+goog.debug.DebugWindow.prototype.getCookie_ = function(key, opt_default) {
+  return goog.debug.DebugWindow.getCookieValue_(
+      this.identifier_, key, opt_default);
+};
+
+
+/**
+ * Retrieve data (using cookies).
+ * @param {string} identifier Identifier for logging class.
+ * @param {string} key Data name.
+ * @param {string=} opt_default Optional default value if cookie doesn't exist.
+ * @return {string} Cookie value.
+ * @private
+ */
+goog.debug.DebugWindow.getCookieValue_ = function(
+    identifier, key, opt_default) {
+  var fullKey = key + identifier;
+  var cookie = String(document.cookie);
+  var start = cookie.indexOf(fullKey + '=');
+  if (start != -1) {
+    var end = cookie.indexOf(';', start);
+    return decodeURIComponent(cookie.substring(start + fullKey.length + 1,
+        end == -1 ? cookie.length : end));
+  } else {
+    return opt_default || '';
+  }
+};
+
+
+/**
+ * @param {string} identifier Identifier for logging class.
+ * @return {boolean} Whether the DebugWindow is enabled.
+ */
+goog.debug.DebugWindow.isEnabled = function(identifier) {
+  return goog.debug.DebugWindow.getCookieValue_(identifier, 'enabled') == '1';
+};
+
+
+/**
+ * Saves the window position size to a cookie
+ * @private
+ */
+goog.debug.DebugWindow.prototype.saveWindowPositionSize_ = function() {
+  if (!this.hasActiveWindow()) {
+    return;
+  }
+  var x = this.win_.screenX || this.win_.screenLeft || 0;
+  var y = this.win_.screenY || this.win_.screenTop || 0;
+  var w = this.win_.outerWidth || 800;
+  var h = this.win_.outerHeight || 500;
+  this.setCookie_('dbg', x + ',' + y + ',' + w + ',' + h);
+};
+
+
+/**
+ * Adds a logger name to be filtered.
+ * @param {string} loggerName the logger name to add.
+ */
+goog.debug.DebugWindow.prototype.addFilter = function(loggerName) {
+  this.filteredLoggers_[loggerName] = 1;
+};
+
+
+/**
+ * Removes a logger name to be filtered.
+ * @param {string} loggerName the logger name to remove.
+ */
+goog.debug.DebugWindow.prototype.removeFilter = function(loggerName) {
+  delete this.filteredLoggers_[loggerName];
+};
+
+
+/**
+ * Modify the size of the circular buffer. Allows the log to retain more
+ * information while the window is closed.
+ * @param {number} size New size of the circular buffer.
+ */
+goog.debug.DebugWindow.prototype.resetBufferWithNewSize = function(size) {
+  if (size > 0 && size < 50000) {
+    this.clear_();
+    this.savedMessages_ = new goog.structs.CircularBuffer(size);
+  }
+};
+// Copyright 2006 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Definition of the FancyWindow class. Please minimize
+ * dependencies this file has on other closure classes as any dependency it
+ * takes won't be able to use the logging infrastructure.
+ *
+ * This is a pretty hacky implementation, aimed at making debugging of large
+ * applications more manageable.
+ *
+ * @see ../demos/debug.html
+ */
+
+
+goog.provide('goog.debug.FancyWindow');
+
+goog.require('goog.debug.DebugWindow');
+goog.require('goog.debug.LogManager');
+goog.require('goog.debug.Logger');
+goog.require('goog.debug.Logger.Level');
+goog.require('goog.dom.DomHelper');
+goog.require('goog.object');
+goog.require('goog.string');
+goog.require('goog.userAgent');
+
+
+
+/**
+ * Provides a Fancy extension to the DebugWindow class.  Allows filtering based
+ * on loggers and levels.
+ *
+ * @param {string=} opt_identifier Idenitifier for this logging class.
+ * @param {string=} opt_prefix Prefix pre-pended to messages.
+ * @constructor
+ * @extends {goog.debug.DebugWindow}
+ */
+goog.debug.FancyWindow = function(opt_identifier, opt_prefix) {
+  this.readOptionsFromLocalStorage_();
+  goog.base(this, opt_identifier, opt_prefix);
+};
+goog.inherits(goog.debug.FancyWindow, goog.debug.DebugWindow);
+
+
+/**
+ * Constant indicating if we are able to use localStorage to persist filters
+ * @type {boolean}
+ */
+goog.debug.FancyWindow.HAS_LOCAL_STORE = (function() {
+  /** @preserveTry */
+  try {
+    return !!window['localStorage'].getItem;
+  } catch (e) {}
+  return false;
+})();
+
+
+/**
+ * Constant defining the prefix to use when storing log levels
+ * @type {string}
+ */
+goog.debug.FancyWindow.LOCAL_STORE_PREFIX = 'fancywindow.sel.';
+
+
+/**
+ * Write to the log and maybe scroll into view
+ * @param {string} html HTML to post to the log.
+ * @protected
+ * @suppress {underscore}
+ */
+goog.debug.FancyWindow.prototype.writeBufferToLog_ = function(html) {
+  this.lastCall_ = goog.now();
+  if (this.hasActiveWindow()) {
+    var logel = this.dh_.getElement('log');
+
+    // Work out if scrolling is needed before we add the content
+    var scroll =
+        logel.scrollHeight - (logel.scrollTop + logel.offsetHeight) <= 100;
+
+    for (var i = 0; i < this.outputBuffer_.length; i++) {
+      var div = this.dh_.createDom('div', 'logmsg');
+      div.innerHTML = this.outputBuffer_[i];
+      logel.appendChild(div);
+    }
+    this.outputBuffer_.length = 0;
+    this.resizeStuff_();
+
+    if (scroll) {
+      logel.scrollTop = logel.scrollHeight;
+    }
+  }
+};
+
+
+/**
+ * Writes the initial HTML of the debug window
+ * @protected
+ * @suppress {underscore}
+ */
+goog.debug.FancyWindow.prototype.writeInitialDocument_ = function() {
+  if (!this.hasActiveWindow()) {
+    return;
+  }
+
+  var doc = this.win_.document;
+  doc.open();
+  doc.write(this.getHtml_());
+  doc.close();
+
+  (goog.userAgent.IE ? doc.body : this.win_).onresize =
+      goog.bind(this.resizeStuff_, this);
+
+  // Create a dom helper for the logging window
+  this.dh_ = new goog.dom.DomHelper(doc);
+
+  // Don't use events system to reduce dependencies
+  this.dh_.getElement('openbutton').onclick =
+      goog.bind(this.openOptions_, this);
+  this.dh_.getElement('closebutton').onclick =
+      goog.bind(this.closeOptions_, this);
+  this.dh_.getElement('clearbutton').onclick =
+      goog.bind(this.clear_, this);
+  this.dh_.getElement('exitbutton').onclick =
+      goog.bind(this.exit_, this);
+
+  this.writeSavedMessages_();
+};
+
+
+/**
+ * Show the options menu.
+ * @return {boolean} false.
+ * @private
+ */
+goog.debug.FancyWindow.prototype.openOptions_ = function() {
+  var el = this.dh_.getElement('optionsarea');
+  el.innerHTML = '';
+
+  var loggers = goog.debug.FancyWindow.getLoggers_();
+  var dh = this.dh_;
+  for (var i = 0; i < loggers.length; i++) {
+    var logger = goog.debug.Logger.getLogger(loggers[i]);
+    var curlevel = logger.getLevel() ? logger.getLevel().name : 'INHERIT';
+    var div = dh.createDom('div', {},
+        this.getDropDown_('sel' + loggers[i], curlevel),
+        dh.createDom('span', {}, loggers[i] || '(root)'));
+    el.appendChild(div);
+  }
+
+  this.dh_.getElement('options').style.display = 'block';
+  return false;
+};
+
+
+/**
+ * Make a drop down for the log levels.
+ * @param {string} id Logger id.
+ * @param {string} selected What log level is currently selected.
+ * @return {Element} The newly created 'select' DOM element.
+ * @private
+ */
+goog.debug.FancyWindow.prototype.getDropDown_ = function(id, selected) {
+  var dh = this.dh_;
+  var sel = dh.createDom('select', {'id': id});
+  var levels = goog.debug.Logger.Level.PREDEFINED_LEVELS;
+  for (var i = 0; i < levels.length; i++) {
+    var level = levels[i];
+    var option = dh.createDom('option', {}, level.name);
+    if (selected == level.name) {
+      option.selected = true;
+    }
+    sel.appendChild(option);
+  }
+  sel.appendChild(dh.createDom('option',
+      {'selected': selected == 'INHERIT'}, 'INHERIT'));
+  return sel;
+};
+
+
+/**
+ * Close the options menu.
+ * @return {boolean} The value false.
+ * @private
+ */
+goog.debug.FancyWindow.prototype.closeOptions_ = function() {
+  this.dh_.getElement('options').style.display = 'none';
+  var loggers = goog.debug.FancyWindow.getLoggers_();
+  var dh = this.dh_;
+  for (var i = 0; i < loggers.length; i++) {
+    var logger = goog.debug.Logger.getLogger(loggers[i]);
+    var sel = dh.getElement('sel' + loggers[i]);
+    var level = sel.options[sel.selectedIndex].text;
+    if (level == 'INHERIT') {
+      logger.setLevel(null);
+    } else {
+      logger.setLevel(goog.debug.Logger.Level.getPredefinedLevel(level));
+    }
+  }
+  this.writeOptionsToLocalStorage_();
+  return false;
+};
+
+
+/**
+ * Resize the lof elements
+ * @private
+ */
+goog.debug.FancyWindow.prototype.resizeStuff_ = function() {
+  var dh = this.dh_;
+  var logel = dh.getElement('log');
+  var headel = dh.getElement('head');
+  logel.style.top = headel.offsetHeight + 'px';
+  logel.style.height = (dh.getDocument().body.offsetHeight -
+      headel.offsetHeight - (goog.userAgent.IE ? 4 : 0)) + 'px';
+};
+
+
+/**
+ * Handles the user clicking the exit button, disabled the debug window and
+ * closes the popup.
+ * @param {Event} e Event object.
+ * @private
+ */
+goog.debug.FancyWindow.prototype.exit_ = function(e) {
+  this.setEnabled(false);
+  if (this.win_) {
+    this.win_.close();
+  }
+};
+
+
+/**
+ * @return {string} The style rule text, for inclusion in the initial HTML.
+ */
+goog.debug.FancyWindow.prototype.getStyleRules = function() {
+  return goog.base(this, 'getStyleRules') +
+      'html,body{height:100%;width:100%;margin:0px;padding:0px;' +
+      'background-color:#FFF;overflow:hidden}' +
+      '*{}' +
+      '.logmsg{border-bottom:1px solid #CCC;padding:2px;font:90% monospace}' +
+      '#head{position:absolute;width:100%;font:x-small arial;' +
+      'border-bottom:2px solid #999;background-color:#EEE;}' +
+      '#head p{margin:0px 5px;}' +
+      '#log{position:absolute;width:100%;background-color:#FFF;}' +
+      '#options{position:absolute;right:0px;width:50%;height:100%;' +
+      'border-left:1px solid #999;background-color:#DDD;display:none;' +
+      'padding-left: 5px;font:normal small arial;overflow:auto;}' +
+      '#openbutton,#closebutton{text-decoration:underline;color:#00F;cursor:' +
+      'pointer;position:absolute;top:0px;right:5px;font:x-small arial;}' +
+      '#clearbutton{text-decoration:underline;color:#00F;cursor:' +
+      'pointer;position:absolute;top:0px;right:80px;font:x-small arial;}' +
+      '#exitbutton{text-decoration:underline;color:#00F;cursor:' +
+      'pointer;position:absolute;top:0px;right:50px;font:x-small arial;}' +
+      'select{font:x-small arial;margin-right:10px;}' +
+      'hr{border:0;height:5px;background-color:#8c8;color:#8c8;}';
+};
+
+
+/**
+ * Return the default HTML for the debug window
+ * @return {string} Html.
+ * @private
+ */
+goog.debug.FancyWindow.prototype.getHtml_ = function() {
+  return '' +
+      '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"' +
+      '"http://www.w3.org/TR/html4/loose.dtd">' +
+      '<html><head><title>Logging: ' + this.identifier_ + '</title>' +
+      '<style>' + this.getStyleRules() + '</style>' +
+      '</head><body>' +
+      '<div id="log" style="overflow:auto"></div>' +
+      '<div id="head">' +
+      '<p><b>Logging: ' + this.identifier_ + '</b></p><p>' +
+      this.welcomeMessage + '</p>' +
+      '<span id="clearbutton">clear</span>' +
+      '<span id="exitbutton">exit</span>' +
+      '<span id="openbutton">options</span>' +
+      '</div>' +
+      '<div id="options">' +
+      '<big><b>Options:</b></big>' +
+      '<div id="optionsarea"></div>' +
+      '<span id="closebutton">save and close</span>' +
+      '</div>' +
+      '</body></html>';
+};
+
+
+/**
+ * Write logger levels to localStorage if possible.
+ * @private
+ */
+goog.debug.FancyWindow.prototype.writeOptionsToLocalStorage_ = function() {
+  if (!goog.debug.FancyWindow.HAS_LOCAL_STORE) {
+    return;
+  }
+  var loggers = goog.debug.FancyWindow.getLoggers_();
+  var storedKeys = goog.debug.FancyWindow.getStoredKeys_();
+  for (var i = 0; i < loggers.length; i++) {
+    var key = goog.debug.FancyWindow.LOCAL_STORE_PREFIX + loggers[i];
+    var level = goog.debug.Logger.getLogger(loggers[i]).getLevel();
+    if (key in storedKeys) {
+      if (!level) {
+        window.localStorage.removeItem(key);
+      } else if (window.localStorage.getItem(key) != level.name) {
+        window.localStorage.setItem(key, level.name);
+      }
+    } else if (level) {
+      window.localStorage.setItem(key, level.name);
+    }
+  }
+};
+
+
+/**
+ * Sync logger levels with any values stored in localStorage.
+ * @private
+ */
+goog.debug.FancyWindow.prototype.readOptionsFromLocalStorage_ = function() {
+  if (!goog.debug.FancyWindow.HAS_LOCAL_STORE) {
+    return;
+  }
+  var storedKeys = goog.debug.FancyWindow.getStoredKeys_();
+  for (var key in storedKeys) {
+    var loggerName = key.replace(goog.debug.FancyWindow.LOCAL_STORE_PREFIX, '');
+    var logger = goog.debug.Logger.getLogger(loggerName);
+    var curLevel = logger.getLevel();
+    var storedLevel = window.localStorage.getItem(key).toString();
+    if (!curLevel || curLevel.toString() != storedLevel) {
+      logger.setLevel(goog.debug.Logger.Level.getPredefinedLevel(storedLevel));
+    }
+  }
+};
+
+
+/**
+ * Helper function to create a list of locally stored keys. Used to avoid
+ * expensive localStorage.getItem() calls.
+ * @return {Object} List of keys.
+ * @private
+ */
+goog.debug.FancyWindow.getStoredKeys_ = function() {
+  var storedKeys = {};
+  for (var i = 0, len = window.localStorage.length; i < len; i++) {
+    var key = window.localStorage.key(i);
+    if (key != null && goog.string.startsWith(
+        key, goog.debug.FancyWindow.LOCAL_STORE_PREFIX)) {
+      storedKeys[key] = true;
+    }
+  }
+  return storedKeys;
+};
+
+
+/**
+ * Gets a sorted array of all the loggers registered
+ * @return {Array} Array of logger idents, e.g. goog.net.XhrIo.
+ * @private
+ */
+goog.debug.FancyWindow.getLoggers_ = function() {
+  var loggers = goog.object.getKeys(goog.debug.LogManager.getLoggers());
+  loggers.sort();
+  return loggers;
+};
 goog.provide('whipple.eig.start');
 goog.require('goog.dom');
+goog.require('goog.debug.Logger');
+goog.require('goog.debug.FancyWindow');
 whipple.eig.start = function(){
+        // Create the debug window.
+    if (goog.DEBUG) {
+
+        var debugWindow = new goog.debug.FancyWindow('main');
+        debugWindow.setEnabled(true);
+        debugWindow.init();
+    }
+    var logger_ =
+    goog.debug.Logger.getLogger('surfforecaster.main.logger');
+    logger_.info('Loading Main');
+    
 	alert('Starting our program.')
   var A = [[1,2,3],[4,5,6],[7,8,9]];
   var eigs = numeric.eig(A);
