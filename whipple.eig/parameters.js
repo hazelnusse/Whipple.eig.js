@@ -1,17 +1,13 @@
 goog.provide('whipple.eig.Parameters');
-/** @const */
-var pi = 3.141592653589793;
-
 /**
  * @param {!Element} theElements
  * @constructor
  */
 whipple.eig.Parameters = function(thePositionElement){
-	this.pi = pi;
 	// Bicycle parameters
 	this.w = 1.02;
 	this.c = 0.08;
-	this.lambda = this.pi / 10.0;
+	this.lambda = Math.PI/ 10.0;
 	this.g = 9.81;
 
 	// Rear Wheel
