@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+  <script src="./numericjs/src/numeric.js"></script>
+
+  <script>
+  function computeEigenvalues()
+  {
+    var A = [[1,2,3],[4,5,6],[7,8,9]];
+    var eigs = numeric.eig(A);
+    alert(eigs);
+  }
+  </script>
+</head>
+<body>
+<p id="demo">This will become eigenvalues.</p>
+<button type="button" onclick="computeEigenvalues()">Compute Eigenvalues</button>
+</body>
+<html>
