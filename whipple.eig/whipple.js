@@ -23,7 +23,7 @@ whipple.eig.Whipple = function() {
  * @return {array}
  */
 whipple.eig.prototype.computeEigenvalues = function() {
-  
+
   var mT = this.parameters_.mR + this.parameters_.mB
          + this.parameters_.mH + this.parameters_.mF;
   var xT = (this.parameters_.xB*this.parameters_.mB
@@ -105,5 +105,7 @@ whipple.eig.prototype.computeEigenvalues = function() {
             [-(mu*ST + SF*Math.cos(this.parameters_.lambda)),
               IAlz/this.parameters_.w*Math.cos(this.parameters_.lambda)
               + mu*(SA + ITzz/this.parameters_.w*Math.cos(this.parameters_.lambda))];
+  var M_inv = numeric.inv(M);
+  // TODO: populate 4x4 system dynamic matrix that we compute eigenvalues of
 }
 
