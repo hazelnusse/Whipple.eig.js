@@ -4,6 +4,7 @@
 * @author hazelnusse@gmail.com (Dale Lukas Peterson)
 */
 goog.provide('whipple.eig.Whipple');
+goog.provide('whipple.eig.computeEigenvalues');
 goog.require('whipple.eig.Parameters');
 
 /**
@@ -17,7 +18,7 @@ whipple.eig.Whipple = function() {
   * @private
   */
   this.parameters_ = new Parameters();
-}
+};
 
 /**
  * @return {array}
@@ -107,5 +108,5 @@ whipple.eig.prototype.computeEigenvalues = function() {
               + mu*(SA + ITzz/this.parameters_.w*Math.cos(this.parameters_.lambda))];
   var M_inv = numeric.inv(M);
   // TODO: populate 4x4 system dynamic matrix that we compute eigenvalues of
-}
+};
 

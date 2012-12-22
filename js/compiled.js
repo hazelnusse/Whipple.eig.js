@@ -1536,9 +1536,9 @@ goog.scope = function(fn) {
 };
 
 
-goog.addDependency("../whipple.eig/externs.js", [], []);
 goog.addDependency("../whipple.eig/main.js", ["whipple.eig.start"], ["goog.dom", "goog.debug.Logger", "goog.debug.FancyWindow"]);
 goog.addDependency("../whipple.eig/parameters.js", ["whipple.eig.Parameters"], []);
+goog.addDependency("../whipple.eig/whipple.js", ["whipple.eig.Whipple", "whipple.eig.computeEigenvalues"], ["whipple.eig.Parameters"]);
 goog.addDependency("/closure/goog/array/array.js", ["goog.array", "goog.array.ArrayLike"], ["goog.asserts"]);
 goog.addDependency("/closure/goog/asserts/asserts.js", ["goog.asserts", "goog.asserts.AssertionError"], ["goog.debug.Error", "goog.string"]);
 goog.addDependency("/closure/goog/async/conditionaldelay.js", ["goog.async.ConditionalDelay"], ["goog.Disposable", "goog.async.Delay"]);
@@ -2311,6 +2311,7 @@ goog.addDependency("/closure/goog/vec/vec3.js", ["goog.vec.Vec3"], ["goog.vec"])
 goog.addDependency("/closure/goog/vec/vec4.js", ["goog.vec.Vec4"], ["goog.vec"]);
 goog.addDependency("/closure/goog/webgl/webgl.js", ["goog.webgl"], []);
 goog.addDependency("/closure/goog/window/window.js", ["goog.window"], ["goog.string", "goog.userAgent"]);
+goog.addDependency("/externs.js", [], []);
 goog.addDependency("/soy/soyutils.js", [], []);
 goog.addDependency("/soy/soyutils_usegoog.js", ["soy", "soy.StringBuilder", "soy.esc", "soydata", "soydata.SanitizedHtml", "soydata.SanitizedHtmlAttribute", "soydata.SanitizedJsStrChars", "soydata.SanitizedUri"], ["goog.asserts", "goog.dom.DomHelper", "goog.format", "goog.i18n.BidiFormatter", "goog.i18n.bidi", "goog.soy", "goog.string", "goog.string.StringBuffer"]);
 goog.addDependency("/third_party/closure/goog/base.js", [], []);
@@ -14792,4 +14793,158 @@ whipple.eig.start = function(){
   alert(eigs);
 }
 goog.exportSymbol('whipple.eig.start', whipple.eig.start);
+goog.provide('whipple.eig.Parameters');
+/**
+ * @param {!Element} theElements
+ * @constructor
+ */
+whipple.eig.Parameters = function(thePositionElement){
+	// Bicycle parameters
+	this.w = 1.02;
+	this.c = 0.08;
+	this.lambda = Math.PI/ 10.0;
+	this.g = 9.81;
+
+	// Rear Wheel
+	this.rR = 0.3;
+	this.mR = 2.0;
+	this.IRxx = 0.0603;
+	this.IRyy = 0.12;
+
+	// Rear frame & rider
+	this.xB = 0.3;
+	this.zB = -0.9;
+	this.mB = 85.0;
+	this.IBxx = 9.2;
+	this.IByy = 11.0;
+	this.IBzz = 2.8;
+	this.IBxz = 2.4;
+
+	// Fork and handlebars
+	this.xH = 0.9;
+	this.zH = -0.7;
+	this.mH = 4.0;
+	this.IHxx = 0.05892;
+	this.IHyy = 0.06;
+	this.IHzz = 0.00708;
+	this.IHxz = -0.00756;
+
+	// Front wheel
+	this.rF = 0.35;
+	this.mF = 3.0;
+	this.IFxx = 0.1405;
+	this.IFyy = 0.28;
+};
+/**
+* @fileoverview Whipple contains information about a Whipple bicycle model,
+* such as it's parameters and how to compute the linearized dynamics matrices.
+* @author hazelnusse@gmail.com (Dale Lukas Peterson)
+*/
+goog.provide('whipple.eig.Whipple');
+goog.provide('whipple.eig.computeEigenvalues');
+goog.require('whipple.eig.Parameters');
+
+/**
+* Creates a new Whipple Model, default initialized with benchmark values of
+* parameters.
+* @constructor
+*/
+whipple.eig.Whipple = function() {
+  /**
+  * @type {Parameters}
+  * @private
+  */
+  this.parameters_ = new Parameters();
+};
+
+/**
+ * @return {array}
+ */
+whipple.eig.prototype.computeEigenvalues = function() {
+
+  var mT = this.parameters_.mR + this.parameters_.mB
+         + this.parameters_.mH + this.parameters_.mF;
+  var xT = (this.parameters_.xB*this.parameters_.mB
+            + this.parameters_.xH*this.parameters_.mH
+            + this.parameters_.w*this.parameters_.mF) / this.parameters_.mT;
+  var zT = (-this.parameters_.rR*this.parameters_.mR
+            + this.parameters_.zB*this.parameters_.mB
+            + this.parameters_.zH*this.parameters_.mH
+            - this.parameters_.rF*this.parameters_.mF) / this.parameters_.mT;
+
+  var ITxx = this.parameters_.IRxx + this.parameters_.IBxx
+           + this.parameters_.IHxx + this.parameters_.IFxx
+           + this.parameters_.mR*Math.pow(this.parameters_.rR, 2)
+           + this.parameters_.mB*Math.pow(this.parameters_.zB, 2)
+           + this.parameters_.mH*Math.pow(this.parameters_.zH, 2)
+           + this.parameters_.mF*Math.pow(this.parameters_.rF, 2);
+  var ITxz = this.parameters_.IBxz + this.parameters_.IHxz
+           - this.parameters_.mB*this.parameters_.xB*this.parameters_.zB
+           - this.parameters_.mH*this.parameters_.xH*this.parameters_.zH
+           + this.parameters_.mF*this.parameters_.w*this.parameters_.rF;
+  var IRzz = this.parameters_.IRxx;
+  var IFzz = this.parameters_.IFxx;
+  var ITzz = this.parameters_.IRzz + this.parameters_.IBzz
+           + this.parameters_.IHzz + this.parameters_.IFzz
+           + this.parameters_.mB*Math.pow(this.parameters_.xB, 2)
+           + this.parameters_.mH*Math.pow(this.parameters_.xH, 2)
+           + this.parameters_.mF*Math.pow(this.parameters_.w, 2);
+
+  var mA = this.parameters_.mH + this.parameters_.mF;
+  var xA = (this.parameters_.xH*this.parameters_.mH
+            + this.parameters_.w*this.parameters_.mF)/mA;
+  var zA = (this.parameters_.zH*this.parameters_.mH
+            - this.parameters_.rF*this.parameters_.mF)/mA;
+
+  var IAxx = this.parameters_.IHxx + this.parameters_.IFxx
+           + this.parameters_.mH*Math.pow(this.parameters_.zH - zA, 2)
+           + this.parameters_.mF*Math.pow(this.parameters_.rF + zA, 2);
+  var IAxz = this.parameters_.IHxz
+           - this.parameters_.mH*(this.parameters_.xH - xA)
+             *(this.parameters_.zH - zA)
+           + this.parameters_.mF*(this.parameters_.w - xA)
+             *(this.parameters_.rF + zA);
+  var IAzz = this.parameters_.IHzz + this.parameters_.IFzz
+           + this.parameters_.mH*Math.pow(this.parameters_.xH - xA, 2)
+           + this.parameters_.mF*Math.pow(this.parameters_.w - xA, 2);
+
+  var uA = (xA - this.parameters_.w - this.parameters_.c)*Math.cos(lambda)
+         - zA*Math.sin(this.parameters_.lambda);
+
+  var IAll = mA*uA^2 + IAxx*Math.pow(Math.sin(this.parameters_.lambda), 2)
+           + 2*IAxz*Math.sin(this.parameters_.lambda)
+            *Math.cos(this.parameters_.lambda)
+           + IAzz*Math.pow(Math.cos(this.parameters_.lambda), 2);
+  var IAlx = -mA*uA*zA + IAxx*Math.sin(this.parameters_.lambda)
+           + IAxz*Math.cos(this.parameters_.lambda);
+  var IAlz = mA*uA*xA + IAxz*Math.sin(this.parameters_.lambda)
+           + IAzz*Math.cos(this.parameters_.lambda);
+
+  var mu = this.parameters_.c
+           / this.parameters_.w*Math.cos(this.parameters_.lambda);
+  var SR = this.parameters_.IRyy / this.parameters_.rR;
+  var SF = this.parameters_.IFyy / this.parameters_.rF;
+  var ST = SR + SF;
+  var SA = mA*uA + mu*mT*xT;
+
+  var M = [[ITxx, IAlx + mu*ITxz],
+           [IAlx + mu*ITxz, IAll + 2*mu*IAlz + Math.pow(mu, 2) * ITzz]];
+
+  var K0 = [[mT*zT, -SA],
+            [-SA, -SA*Math.sin(this.parameters_.lambda)]];
+  var K2 = [[0.0, (ST - mT*zT)
+                   /this.parameters_.w*Math.cos(this.parameters_.lambda)],
+            [0.0, (SA + SF*Math.sin(this.parameters_.lambda))
+                   /this.parameters_.w*Math.cos(this.parameters_.lambda)]];
+
+  var C1 = [[0.0, mu*ST + SF*Math.cos(this.parameters_.lambda)
+                  + ITxz/this.parameters_.w*Math.cos(this.parameters_.lambda)
+                  - mu*mT*zT],
+            [-(mu*ST + SF*Math.cos(this.parameters_.lambda)),
+              IAlz/this.parameters_.w*Math.cos(this.parameters_.lambda)
+              + mu*(SA + ITzz/this.parameters_.w*Math.cos(this.parameters_.lambda))];
+  var M_inv = numeric.inv(M);
+  // TODO: populate 4x4 system dynamic matrix that we compute eigenvalues of
+};
+
 

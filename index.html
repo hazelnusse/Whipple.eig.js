@@ -5,10 +5,17 @@
 <title>Whipple model eigen value calculation</title>
 <script src="./numericjs/src/numeric.js"></script>
 <script src='./js/compiled.js'></script>
+<script>
+function myFunction() {
+  var bike = whipple.eig.Whipple(); // << NOT WORKING... need help!
+
+}
+</script>
+
 </head>
 <body onload='whipple.eig.start()' >
 <h1>Online implementation of the Whipple bicycle model:</h1>
 <p id="demo">This will become eigenvalues.</p>
-<button type="button" onclick="computeEigenvalues()">Compute Eigenvalues</button>
+<button type="button" onclick="myFunction()">Compute Eigenvalues</button>
 </body>
 </html>

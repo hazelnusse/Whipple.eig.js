@@ -3,7 +3,10 @@
     "id": "whipple",
     "paths": [
     "../whipple.eig/"],
-    "inputs": ["../whipple.eig/main.js"],
+    // Do parameters.js and whipple.js need to be in inputs?
+    // when i put them there, I get an uncaught ReferenceError: whipple is not
+    // defined
+    "inputs": ["../whipple.eig/main.js", "../whipple.eig/parameters.js", "../whipple.eig/whipple.js"],
     "level": "VERBOSE",
    //  "mode": "RAW",
 //        "mode": "SIMPLE",
