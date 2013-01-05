@@ -23,7 +23,7 @@
     goog.require('goog.ui.AnimatedZippy');
     goog.require('goog.ui.Zippy.Events');
       goog.require('whipple.eig.Parameters')
-      
+      goog.require('goog.structs.Map');
         </script>
     </head>
     <body>
@@ -42,6 +42,10 @@
              assertEquals(parameters.w,1.02);
              assertEquals(parameters.lambda,Math.PI/10);
              assertEquals(parameters.IFyy,0.28);
+			var testMap = new goog.structs.Map();
+			testMap.set('ourTest','-1.101');
+			parameters.setParameters(testMap)
+			assertEquals(parameters.ourTest,-1.101);
             }
         </script>
     </body>

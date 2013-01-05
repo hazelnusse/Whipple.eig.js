@@ -1,4 +1,5 @@
 goog.provide('whipple.eig.Parameters');
+goog.require('goog.structs.Map')
 /**
  * @constructor
  */
@@ -42,4 +43,17 @@ whipple.eig.Parameters = function(){
 	
 	//Not sure what they are
 	this.mT = 3.0;
+};
+/**
+ * @param {goog.structs.Map}  newParametersMap
+ */
+whipple.eig.Parameters.prototype.setParameters = function(newParametersMap){
+	var iter = newParametersMap.getKeys();
+	var ourParameters = this;
+	goog.iter.forEach(iter, function(theKey, index) {
+		//console.log(theKey);
+		ourParameters[theKey] =Number(newParametersMap.get(theKey));
+		//console.log(ourParameters.ourTest);
+	  });
+	//console.log(ourParameters.ourTest)
 };
