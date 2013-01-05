@@ -10,7 +10,7 @@
     "level": "VERBOSE",
    //  "mode": "RAW",
 //        "mode": "SIMPLE",
-  "mode": "RAW",
+  "mode": "ADVANCED",
     "externs":'../whipple.eig/externs.js',
     "define": {
     "goog.DEBUG": true

@@ -16,7 +16,7 @@ whipple.eig.start = function(){
     
 	alert('Starting our program.')
   var A = [[1,2,3],[4,5,6],[7,8,9]];
-  var eigs = numeric.eig(A);
+  var eigs = numeric.eig(A,100);
   alert(eigs);
 }
 goog.exportSymbol('whipple.eig.start', whipple.eig.start);

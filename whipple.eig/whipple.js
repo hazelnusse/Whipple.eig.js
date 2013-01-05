@@ -4,7 +4,6 @@
 * @author hazelnusse@gmail.com (Dale Lukas Peterson)
 */
 goog.provide('whipple.eig.Whipple');
-goog.provide('whipple.eig.computeEigenvalues');
 goog.require('whipple.eig.Parameters');
 
 /**
@@ -14,16 +13,16 @@ goog.require('whipple.eig.Parameters');
 */
 whipple.eig.Whipple = function() {
   /**
-  * @type {Parameters}
+  * @type {whipple.eig.Parameters}
   * @private
   */
-  this.parameters_ = new Parameters();
+  this.parameters_ = new whipple.eig.Parameters();
 };
 
 /**
- * @return {array}
+ * @return {Array}
  */
-whipple.eig.prototype.computeEigenvalues = function() {
+whipple.eig.Whipple.prototype.computeEigenvalues = function() {
 
   var mT = this.parameters_.mR + this.parameters_.mB
          + this.parameters_.mH + this.parameters_.mF;
@@ -71,7 +70,7 @@ whipple.eig.prototype.computeEigenvalues = function() {
            + this.parameters_.mH*Math.pow(this.parameters_.xH - xA, 2)
            + this.parameters_.mF*Math.pow(this.parameters_.w - xA, 2);
 
-  var uA = (xA - this.parameters_.w - this.parameters_.c)*Math.cos(lambda)
+  var uA = (xA - this.parameters_.w - this.parameters_.c)*Math.cos(this.parameters_.lambda)
          - zA*Math.sin(this.parameters_.lambda);
 
   var IAll = mA*uA^2 + IAxx*Math.pow(Math.sin(this.parameters_.lambda), 2)
@@ -105,8 +104,11 @@ whipple.eig.prototype.computeEigenvalues = function() {
                   - mu*mT*zT],
             [-(mu*ST + SF*Math.cos(this.parameters_.lambda)),
               IAlz/this.parameters_.w*Math.cos(this.parameters_.lambda)
-              + mu*(SA + ITzz/this.parameters_.w*Math.cos(this.parameters_.lambda))];
+              + mu*(SA + ITzz/this.parameters_.w*Math.cos(this.parameters_.lambda))]];
   var M_inv = numeric.inv(M);
   // TODO: populate 4x4 system dynamic matrix that we compute eigenvalues of
+  
+  //Not sure what must be returned...
+  return  M_inv;
 };
 

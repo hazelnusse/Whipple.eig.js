@@ -14,7 +14,7 @@ whipple.eig.Parameters = function(){
 	this.mR = 2.0;
 	this.IRxx = 0.0603;
 	this.IRyy = 0.12;
-
+	this.IRzz = 2.8;
 	// Rear frame & rider
 	this.xB = 0.3;
 	this.zB = -0.9;
@@ -38,4 +38,8 @@ whipple.eig.Parameters = function(){
 	this.mF = 3.0;
 	this.IFxx = 0.1405;
 	this.IFyy = 0.28;
+	this.IFzz = 0.28;
+	
+	//Not sure what they are
+	this.mT = 3.0;
 };
