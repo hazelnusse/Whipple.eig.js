@@ -1,9 +1,8 @@
 goog.provide('whipple.eig.Parameters');
 /**
- * @param {!Element} theElements
  * @constructor
  */
-whipple.eig.Parameters = function(thePositionElement){
+whipple.eig.Parameters = function(){
 	// Bicycle parameters
 	this.w = 1.02;
 	this.c = 0.08;

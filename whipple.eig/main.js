@@ -11,7 +11,7 @@ whipple.eig.start = function(){
         debugWindow.init();
     }
     var logger_ =
-    goog.debug.Logger.getLogger('surfforecaster.main.logger');
+    goog.debug.Logger.getLogger('whipple.eig.main.logger');
     logger_.info('Loading Main');
     
 	alert('Starting our program.')

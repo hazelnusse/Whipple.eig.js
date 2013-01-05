@@ -1536,6 +1536,7 @@ goog.scope = function(fn) {
 };
 
 
+goog.addDependency("../whipple.eig/externs.js", [], []);
 goog.addDependency("../whipple.eig/main.js", ["whipple.eig.start"], ["goog.dom", "goog.debug.Logger", "goog.debug.FancyWindow"]);
 goog.addDependency("../whipple.eig/parameters.js", ["whipple.eig.Parameters"], []);
 goog.addDependency("../whipple.eig/whipple.js", ["whipple.eig.Whipple", "whipple.eig.computeEigenvalues"], ["whipple.eig.Parameters"]);
@@ -2311,7 +2312,6 @@ goog.addDependency("/closure/goog/vec/vec3.js", ["goog.vec.Vec3"], ["goog.vec"])
 goog.addDependency("/closure/goog/vec/vec4.js", ["goog.vec.Vec4"], ["goog.vec"]);
 goog.addDependency("/closure/goog/webgl/webgl.js", ["goog.webgl"], []);
 goog.addDependency("/closure/goog/window/window.js", ["goog.window"], ["goog.string", "goog.userAgent"]);
-goog.addDependency("/externs.js", [], []);
 goog.addDependency("/soy/soyutils.js", [], []);
 goog.addDependency("/soy/soyutils_usegoog.js", ["soy", "soy.StringBuilder", "soy.esc", "soydata", "soydata.SanitizedHtml", "soydata.SanitizedHtmlAttribute", "soydata.SanitizedJsStrChars", "soydata.SanitizedUri"], ["goog.asserts", "goog.dom.DomHelper", "goog.format", "goog.i18n.BidiFormatter", "goog.i18n.bidi", "goog.soy", "goog.string", "goog.string.StringBuffer"]);
 goog.addDependency("/third_party/closure/goog/base.js", [], []);
